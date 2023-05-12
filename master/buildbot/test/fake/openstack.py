@@ -118,26 +118,21 @@ class Servers():
         if instance_id not in self.instances:
             raise NotFound
         inst = self.instances[instance_id]
-        if not self.fail_to_get or inst.gets < self.gets_until_disappears:
-            if not inst.status.startswith('BUILD'):
-                return inst
-            inst.gets += 1
-            if inst.gets >= self.gets_until_active:
-                if not self.fail_to_start:
-                    inst.status = ACTIVE
-                else:
-                    inst.status = ERROR
-            return inst
-        else:
+        if self.fail_to_get and inst.gets >= self.gets_until_disappears:
             raise NotFound
+        if not inst.status.startswith('BUILD'):
+            return inst
+        inst.gets += 1
+        if inst.gets >= self.gets_until_active:
+            inst.status = ACTIVE if not self.fail_to_start else ERROR
+        return inst
 
     def delete(self, instance_id):
         if instance_id in self.instances:
             del self.instances[instance_id]
 
     def findall(self, **kwargs):
-        name = kwargs.get('name', None)
-        if name:
+        if name := kwargs.get('name', None):
             return list(filter(lambda item: item.name == name, self.instances.values()))
         return []
 

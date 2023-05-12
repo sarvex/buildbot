@@ -61,8 +61,6 @@ class SecretInPass(SecretProviderBase):
             rc, output = yield runprocess.run_process(self.master.reactor,
                                                       ['pass', entry], env=self._env,
                                                       collect_stderr=False, stderr_is_error=True)
-            if rc != 0:
-                return None
-            return output.decode("utf-8", "ignore").splitlines()[0]
+            return None if rc != 0 else output.decode("utf-8", "ignore").splitlines()[0]
         except IOError:
             return None

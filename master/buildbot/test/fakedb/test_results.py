@@ -99,10 +99,15 @@ class FakeTestResultsComponent(FakeDBComponent):
         return path_to_id
 
     def _get_code_path_id(self, builderid, path):
-        for id, path_dict in self.code_paths.items():
-            if path_dict['builderid'] == builderid and path_dict['path'] == path:
-                return id
-        return None
+        return next(
+            (
+                id
+                for id, path_dict in self.code_paths.items()
+                if path_dict['builderid'] == builderid
+                and path_dict['path'] == path
+            ),
+            None,
+        )
 
     def _add_names(self, builderid, names):
         name_to_id = {}
@@ -123,10 +128,15 @@ class FakeTestResultsComponent(FakeDBComponent):
         return name_to_id
 
     def _get_name_id(self, builderid, name):
-        for id, name_dict in self.names.items():
-            if name_dict['builderid'] == builderid and name_dict['name'] == name:
-                return id
-        return None
+        return next(
+            (
+                id
+                for id, name_dict in self.names.items()
+                if name_dict['builderid'] == builderid
+                and name_dict['name'] == name
+            ),
+            None,
+        )
 
     @defer.inlineCallbacks
     def addTestResults(self, builderid, test_result_setid, result_values):

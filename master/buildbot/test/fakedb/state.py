@@ -101,8 +101,7 @@ class FakeStateComponent(FakeDBComponent):
         else:
             id = self.objects[state_key] = self._newId()
 
-        self.states[id] = dict((k, json.dumps(v))
-                               for k, v in kwargs.items())
+        self.states[id] = {k: json.dumps(v) for k, v in kwargs.items()}
         return id
 
     # assertions

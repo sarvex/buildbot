@@ -82,8 +82,12 @@ class WampConnector(TestReactorMixin, unittest.TestCase):
     ])
     @defer.inlineCallbacks
     def test_reconfig_does_not_allow_config_change(self, attr_name, attr_value):
-        mq_dict = {'type': 'wamp', 'router_url': "wss://foo", 'realm': "bb"}
-        mq_dict[attr_name] = attr_value
+        mq_dict = {
+            'type': 'wamp',
+            'router_url': "wss://foo",
+            'realm': "bb",
+            attr_name: attr_value,
+        }
         with self.assertRaises(ValueError,
                                msg="Cannot use different wamp settings when reconfiguring"):
             yield self.connector.reconfigServiceWithBuildbotConfig(FakeConfig(mq_dict))

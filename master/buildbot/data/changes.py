@@ -86,14 +86,10 @@ class ChangesEndpoint(FixerMixin, base.BuildNestingMixin, base.Endpoint):
             changes = yield self.master.db.changes.getChangesForBuild(buildid)
         elif ssid is not None:
             change = yield self.master.db.changes.getChangeFromSSid(ssid)
-            if change is not None:
-                changes = [change]
-            else:
-                changes = []
-        else:
-            if resultSpec is not None:
-                resultSpec.fieldMapping = self.fieldMapping
-                changes = yield self.master.db.changes.getChanges(resultSpec=resultSpec)
+            changes = [change] if change is not None else []
+        elif resultSpec is not None:
+            resultSpec.fieldMapping = self.fieldMapping
+            changes = yield self.master.db.changes.getChanges(resultSpec=resultSpec)
         results = []
         for ch in changes:
             results.append((yield self._fixChange(ch, is_graphql='graphql' in kwargs)))
@@ -145,13 +141,11 @@ class Change(base.ResourceType):
             properties[k] = (properties[k], 'Change')
 
         # get a user id
-        if src:
-            # create user object, returning a corresponding uid
-            uid = yield users.createUserObject(self.master,
-                                               author, src)
-        else:
-            uid = None
-
+        uid = (
+            (yield users.createUserObject(self.master, author, src))
+            if src
+            else None
+        )
         if not revlink and revision and repository and callable(self.master.config.revlink):
             # generate revlink from revision and repository using the configured callable
             revlink = self.master.config.revlink(revision, repository) or ''
@@ -172,7 +166,7 @@ class Change(base.ResourceType):
 
         # set the codebase, either the default, supplied, or generated
         if codebase is None \
-                and self.master.config.codebaseGenerator is not None:
+                    and self.master.config.codebaseGenerator is not None:
             pre_change = self.master.config.preChangeGenerator(author=author,
                                                                committer=committer,
                                                                files=files,

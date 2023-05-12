@@ -45,10 +45,7 @@ class HashiCorpVaultSecretProvider(SecretProviderBase):
     @defer.inlineCallbacks
     def reconfigService(self, vaultServer=None, vaultToken=None, secretsmount=None,
                         apiVersion=1):
-        if secretsmount is None:
-            self.secretsmount = "secret"
-        else:
-            self.secretsmount = secretsmount
+        self.secretsmount = "secret" if secretsmount is None else secretsmount
         self.vaultServer = vaultServer
         self.vaultToken = vaultToken
         self.apiVersion = apiVersion
@@ -64,15 +61,11 @@ class HashiCorpVaultSecretProvider(SecretProviderBase):
         """
         parts = entry.rsplit('/', maxsplit=1)
         name = parts[0]
-        if len(parts) > 1:
-            key = parts[1]
-        else:
-            key = 'value'
-
+        key = parts[1] if len(parts) > 1 else 'value'
         if self.apiVersion == 1:
-            path = self.secretsmount + '/' + name
+            path = f'{self.secretsmount}/{name}'
         else:
-            path = self.secretsmount + '/data/' + name
+            path = f'{self.secretsmount}/data/{name}'
 
         # note that the HTTP path contains v1 for both versions of the key-value
         # secret engine. Different versions of the key-value engine are

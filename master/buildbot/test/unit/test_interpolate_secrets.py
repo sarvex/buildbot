@@ -75,7 +75,8 @@ class TestInterpolateSecretsHiddenSecrets(TestReactorMixin, unittest.TestCase):
         fakeStorageService = FakeSecretStorage()
         password = "bar"
         fakeStorageService.reconfigService(
-            secretdict={"foo": password, "other": password + "random", "empty": ""})
+            secretdict={"foo": password, "other": f"{password}random", "empty": ""}
+        )
         self.secretsrv = SecretManager()
         self.secretsrv.services = [fakeStorageService]
         yield self.secretsrv.setServiceParent(self.master)

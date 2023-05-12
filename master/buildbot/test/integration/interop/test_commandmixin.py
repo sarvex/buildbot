@@ -28,15 +28,15 @@ class CommandMixinMaster(RunMasterBase):
 
     @defer.inlineCallbacks
     def setup_config(self):
-        c = {}
         from buildbot.config import BuilderConfig
         from buildbot.process.factory import BuildFactory
         from buildbot.plugins import schedulers
 
-        c['schedulers'] = [
-            schedulers.AnyBranchScheduler(name="sched", builderNames=["testy"])
-        ]
-
+        c = {
+            'schedulers': [
+                schedulers.AnyBranchScheduler(name="sched", builderNames=["testy"])
+            ]
+        }
         f = BuildFactory()
         f.addStep(TestCommandMixinStep())
         c['builders'] = [
@@ -95,7 +95,4 @@ class TestCommandMixinStep(BuildStep, CommandMixin):
         yield self.runRmdir('composite_mixin_test')
 
         hasPath = yield self.pathExists('composite_mixin_test')
-        if hasPath:
-            return results.FAILURE
-
-        return results.SUCCESS
+        return results.FAILURE if hasPath else results.SUCCESS

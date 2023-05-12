@@ -46,8 +46,7 @@ class DownloadSecretsToWorker(BuildStep, CompositeStepMixin):
 
     @defer.inlineCallbacks
     def run(self):
-        res = yield self.runPopulateSecrets()
-        return res
+        return (yield self.runPopulateSecrets())
 
 
 class RemoveWorkerFileSecret(BuildStep, CompositeStepMixin):
@@ -65,13 +64,8 @@ class RemoveWorkerFileSecret(BuildStep, CompositeStepMixin):
         for path, _ in self.secret_to_be_populated:
             res = yield self.runRmFile(path, abandonOnFailure=False)
             all_results.append(res)
-        if FAILURE in all_results:
-            result = FAILURE
-        else:
-            result = SUCCESS
-        return result
+        return FAILURE if FAILURE in all_results else SUCCESS
 
     @defer.inlineCallbacks
     def run(self):
-        res = yield self.runRemoveWorkerFileSecret()
-        return res
+        return (yield self.runRemoveWorkerFileSecret())

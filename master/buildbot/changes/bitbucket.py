@@ -112,7 +112,6 @@ class BitbucketPullrequestPoller(base.ReconfigurablePollingChangeSource, PullReq
     def _processChanges(self, result):
         for pr in result['values']:
             branch = pr['source']['branch']['name']
-            nr = int(pr['id'])
             # Note that this is a short hash. The full length hash can be accessed via the
             # commit api resource but we want to avoid requesting multiple pages as long as
             # we are not sure that the pull request is new or updated.
@@ -120,10 +119,11 @@ class BitbucketPullrequestPoller(base.ReconfigurablePollingChangeSource, PullReq
 
             # check branch
             if not self.branch or branch in self.branch:
+                nr = int(pr['id'])
                 current = yield self._getCurrentRev(nr)
 
                 # compare _short_ hashes to check if the PR has been updated
-                if not current or current[0:12] != revision[0:12]:
+                if not current or current[:12] != revision[:12]:
                     # parse pull request api page (required for the filter)
                     response = yield self._http.get(
                         str(pr['links']['self']['href'])

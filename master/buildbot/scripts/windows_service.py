@@ -160,7 +160,7 @@ class BBService(win32serviceutil.ServiceFramework):
         else:
             # Running from a py2exe built executable - our child process is
             # us (but with the funky cmdline args!)
-            self.runner_prefix = '"' + sys.executable + '"'
+            self.runner_prefix = f'"{sys.executable}"'
 
         # Now our arg processing - this may be better handled by a
         # twisted/buildbot style config file - but as of time of writing,

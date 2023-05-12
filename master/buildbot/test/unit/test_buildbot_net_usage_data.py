@@ -54,16 +54,16 @@ class Tests(unittest.TestCase):
     def getBaseConfig(self):
         return {
             'builders': [
-                BuilderConfig(name="testy",
-                              workernames=["local1", "local2"],
-                              factory=BuildFactory([steps.ShellCommand(command='echo hello')])),
+                BuilderConfig(
+                    name="testy",
+                    workernames=["local1", "local2"],
+                    factory=BuildFactory(
+                        [steps.ShellCommand(command='echo hello')]
+                    ),
+                ),
             ],
-            'workers': [Worker('local' + str(i), 'pass') for i in range(3)],
-            'schedulers': [
-                ForceScheduler(
-                    name="force",
-                    builderNames=["testy"])
-            ],
+            'workers': [Worker(f'local{str(i)}', 'pass') for i in range(3)],
+            'schedulers': [ForceScheduler(name="force", builderNames=["testy"])],
             'protocols': {'null': {}},
             'multiMaster': True,
         }

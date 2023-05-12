@@ -34,7 +34,7 @@ class CollectedValidationError(ValueError):
 
     def __init__(self, errors):
         self.errors = errors
-        super().__init__("\n".join([k + ":" + v for k, v in errors.items()]))
+        super().__init__("\n".join([f"{k}:{v}" for k, v in errors.items()]))
 
 
 class ValidationErrorCollector:
@@ -55,8 +55,7 @@ class ValidationErrorCollector:
         return res
 
     def maybeRaiseCollectedErrors(self):
-        errors = self.errors
-        if errors:
+        if errors := self.errors:
             raise CollectedValidationError(errors)
 
 
@@ -90,7 +89,7 @@ class BaseParameter:
         # join with '_' if both are set (cannot put '.', because it is used as
         # **kwargs)
         if self.parentName and self.name:
-            return self.parentName + '_' + self.name
+            return f'{self.parentName}_{self.name}'
         # otherwise just use the one that is set
         # (this allows empty name for "anonymous nests")
         return self.name or self.parentName
@@ -146,11 +145,7 @@ class BaseParameter:
         if not args:
             if self.required:
                 raise ValidationError(f"'{self.label}' needs to be specified")
-            if self.multiple:
-                args = self.default
-            else:
-                args = [self.default]
-
+            args = self.default if self.multiple else [self.default]
         if self.regex:
             for arg in args:
                 if not self.regex.match(arg):
@@ -190,10 +185,7 @@ class BaseParameter:
     def getSpec(self):
         spec_attributes = []
         accumulateClassList(self.__class__, 'spec_attributes', spec_attributes)
-        ret = {}
-        for i in spec_attributes:
-            ret[i] = getattr(self, i)
-        return ret
+        return {i: getattr(self, i) for i in spec_attributes}
 
 
 class FixedParameter(BaseParameter):
@@ -409,10 +401,7 @@ class NestedParameter(BaseParameter):
         if self.columns is None:
             num_visible_fields = len(
                 [field for field in fields if not field.hide])
-            if num_visible_fields >= 4:
-                self.columns = 2
-            else:
-                self.columns = 1
+            self.columns = 2 if num_visible_fields >= 4 else 1
         if self.columns > 4:
             config.error(
                 "UI only support up to 4 columns in nested parameters")
@@ -449,11 +438,7 @@ class NestedParameter(BaseParameter):
         # default behavior is to set a property
         #  -- use setdefault+update in order to collapse 'anonymous' nested
         #     parameters correctly
-        if self.name:
-            d = properties.setdefault(self.name, {})
-        else:
-            # if there's no name, collapse this nest all the way
-            d = properties
+        d = properties.setdefault(self.name, {}) if self.name else properties
         d.update(kwargs[self.fullName])
 
     def getSpec(self):
@@ -543,13 +528,13 @@ class CodebaseParameter(NestedParameter):
 
         name = name or codebase
         if label is None and codebase:
-            label = "Codebase: " + codebase
+            label = f"Codebase: {codebase}"
 
         fields_dict = dict(branch=branch, revision=revision,
                            repository=repository, project=project)
         for k, v in fields_dict.items():
             if v is DefaultField:
-                v = StringParameter(name=k, label=k.capitalize() + ":")
+                v = StringParameter(name=k, label=f"{k.capitalize()}:")
             elif isinstance(v, str):
                 v = FixedParameter(name=k, default=v)
             fields_dict[k] = v
@@ -585,7 +570,7 @@ class CodebaseParameter(NestedParameter):
             patch = ss.pop('patch', None)
             if patch is not None:
                 for k, v in patch.items():
-                    ss['patch_' + k] = v
+                    ss[f'patch_{k}'] = v
 
             sourcestamps[self.codebase] = ss
 
@@ -833,13 +818,11 @@ class ForceScheduler(base.BaseScheduler):
             ss['codebase'] = cb
         sourcestamps = list(sourcestamps.values())
 
-        # everything is validated, we can create our source stamp, and
-        # buildrequest
-        res = yield self.addBuildsetForSourceStampsWithDefaults(
-            reason=r,
-            sourcestamps=sourcestamps,
-            properties=properties,
-            builderNames=builderNames,
+        return (
+            yield self.addBuildsetForSourceStampsWithDefaults(
+                reason=r,
+                sourcestamps=sourcestamps,
+                properties=properties,
+                builderNames=builderNames,
+            )
         )
-
-        return res

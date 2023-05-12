@@ -81,9 +81,7 @@ class Domain(util.ComparableMixin):
 
     def getAddress(self, name):
         """If name is already an email address, pass it through."""
-        if '@' in name:
-            return name
-        return name + "@" + self.domain
+        return name if '@' in name else f"{name}@{self.domain}"
 
 
 @implementer(interfaces.IEmailSender)
@@ -113,13 +111,11 @@ class MailNotifier(ReporterBase):
                 if not isinstance(r, str) or not VALID_EMAIL.search(r):
                     config.error(f"extra recipient {r} is not a valid email")
 
-        if lookup is not None:
-            if not isinstance(lookup, str):
-                assert interfaces.IEmailLookup.providedBy(lookup)
+        if lookup is not None and not isinstance(lookup, str):
+            assert interfaces.IEmailLookup.providedBy(lookup)
 
-        if extraHeaders:
-            if not isinstance(extraHeaders, dict):
-                config.error("extraHeaders must be a dictionary")
+        if extraHeaders and not isinstance(extraHeaders, dict):
+            config.error("extraHeaders must be a dictionary")
 
         if useSmtps:
             ssl.ensureHasSSL(self.__class__.__name__)
@@ -141,9 +137,8 @@ class MailNotifier(ReporterBase):
         self.sendToInterestedUsers = sendToInterestedUsers
         self.fromaddr = fromaddr
         self.relayhost = relayhost
-        if lookup is not None:
-            if isinstance(lookup, str):
-                lookup = Domain(str(lookup))
+        if lookup is not None and isinstance(lookup, str):
+            lookup = Domain(str(lookup))
         self.lookup = lookup
         self.extraHeaders = extraHeaders
         self.useTls = useTls
@@ -169,21 +164,24 @@ class MailNotifier(ReporterBase):
         # convert to base64 to conform with RFC 5322 2.1.1
         del a['Content-Transfer-Encoding']
         encoders.encode_base64(a)
-        a.add_header('Content-Disposition', "attachment",
-                     filename="source patch " + str(index))
+        a.add_header(
+            'Content-Disposition',
+            "attachment",
+            filename=f"source patch {str(index)}",
+        )
         return a
 
     @defer.inlineCallbacks
     def createEmail(self, msgdict, title, results, builds=None, patches=None, logs=None):
-        text = msgdict['body']
         type = msgdict['type']
         subject = msgdict['subject']
 
         assert '\n' not in subject, \
-            "Subject cannot contain newlines"
+                "Subject cannot contain newlines"
 
         assert type in ('plain', 'html'), f"'{type}' message type must be 'plain' or 'html'."
 
+        text = msgdict['body']
         if patches or logs:
             m = MIMEMultipart()
             txt = MIMEText(text, type, ENCODING)
@@ -206,11 +204,7 @@ class MailNotifier(ReporterBase):
             for log in logs:
                 # Use distinct filenames for the e-mail summary
                 name = f"{log['stepname']}.{log['name']}"
-                if len(builds) > 1:
-                    filename = f"{log['buildername']}.{name}"
-                else:
-                    filename = name
-
+                filename = f"{log['buildername']}.{name}" if len(builds) > 1 else name
                 text = log['content']['content']
                 a = MIMEText(text.encode(ENCODING),
                              _charset=ENCODING)
@@ -233,10 +227,9 @@ class MailNotifier(ReporterBase):
 
             for k, v in extraHeaders.items():
                 if k in m:
-                    twlog.msg("Warning: Got header " + k +
-                              " in self.extraHeaders "
-                              "but it already exists in the Message - "
-                              "not adding it.")
+                    twlog.msg(
+                        f"Warning: Got header {k} in self.extraHeaders but it already exists in the Message - not adding it."
+                    )
                 m[k] = v
         return m
 
@@ -275,9 +268,7 @@ class MailNotifier(ReporterBase):
         recipients = set()
         if self.sendToInterestedUsers:
             if self.lookup:
-                dl = []
-                for u in users:
-                    dl.append(defer.maybeDeferred(self.lookup.getAddress, u))
+                dl = [defer.maybeDeferred(self.lookup.getAddress, u) for u in users]
                 users = yield defer.gatherResults(dl)
 
             for r in users:
@@ -298,9 +289,7 @@ class MailNotifier(ReporterBase):
 
     def formatAddress(self, addr):
         r = parseaddr(addr)
-        if not r[0]:
-            return r[1]
-        return f"\"{Header(r[0], 'utf-8').encode()}\" <{r[1]}>"
+        return f"""\"{Header(r[0], 'utf-8').encode()}\" <{r[1]}>""" if r[0] else r[1]
 
     def processRecipients(self, blamelist, m):
         to_recipients = set(blamelist)

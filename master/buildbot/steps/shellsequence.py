@@ -53,14 +53,17 @@ class ShellArg(results.ResultComputingConfigMixin):
         # only make the check if we have a list
         if not isinstance(self.command, (str, list)):
             config.error(f"{self.command} is an invalid command, it must be a string or a list")
-        if isinstance(self.command, list):
-            if not all(isinstance(x, str) for x in self.command):
-                config.error(f"{self.command} must only have strings in it")
+        if isinstance(self.command, list) and not all(
+            isinstance(x, str) for x in self.command
+        ):
+            config.error(f"{self.command} must only have strings in it")
         runConfParams = [(p_attr, getattr(self, p_attr))
                          for p_attr in self.resultConfig]
-        not_bool = [(p_attr, p_val) for (p_attr, p_val) in runConfParams if not isinstance(p_val,
-                                                                                           bool)]
-        if not_bool:
+        if not_bool := [
+            (p_attr, p_val)
+            for (p_attr, p_val) in runConfParams
+            if not isinstance(p_val, bool)
+        ]:
             config.error(f"{repr(not_bool)} must be booleans")
 
     @defer.inlineCallbacks

@@ -60,17 +60,18 @@ class ResourceType:
 
     @functools.lru_cache(1)
     def getDefaultEndpoint(self):
-        for ep in self.getEndpoints():
-            if not ep.isCollection:
-                return ep
-        return None
+        return next((ep for ep in self.getEndpoints() if not ep.isCollection), None)
 
     @functools.lru_cache(1)
     def getCollectionEndpoint(self):
-        for ep in self.getEndpoints():
-            if ep.isCollection or ep.isPseudoCollection:
-                return ep
-        return None
+        return next(
+            (
+                ep
+                for ep in self.getEndpoints()
+                if ep.isCollection or ep.isPseudoCollection
+            ),
+            None,
+        )
 
     @staticmethod
     def sanitizeMessage(msg):
@@ -114,7 +115,7 @@ class Endpoint:
 
     def control(self, action, args, kwargs):
         # we convert the action into a mixedCase method name
-        action_method = getattr(self, "action" + action.capitalize(), None)
+        action_method = getattr(self, f"action{action.capitalize()}", None)
         if action_method is None:
             raise exceptions.InvalidControlException(f"action: {action} is not supported")
         return action_method(args, kwargs)
@@ -131,9 +132,7 @@ class Endpoint:
                 )
         else:
             parentid = self.parentMapping[parent_type]
-        ret = {'graphql': True}
-        ret[parentid] = parent[parentid]
-        return ret
+        return {'graphql': True, parentid: parent[parentid]}
 
     def get_kwargs_from_graphql(self, parent, resolve_info, args):
         if self.isCollection or self.isPseudoCollection:
@@ -162,37 +161,29 @@ class BuildNestingMixin:
 
     @defer.inlineCallbacks
     def getBuildid(self, kwargs):
-        # need to look in the context of a step, specified by build or
-        # builder or whatever
         if 'buildid' in kwargs:
             return kwargs['buildid']
-        else:
-            builderid = yield self.getBuilderId(kwargs)
-            if builderid is None:
-                return None
-            build = yield self.master.db.builds.getBuildByNumber(
-                builderid=builderid,
-                number=kwargs['build_number'])
-            if not build:
-                return None
-            return build['id']
+        builderid = yield self.getBuilderId(kwargs)
+        if builderid is None:
+            return None
+        build = yield self.master.db.builds.getBuildByNumber(
+            builderid=builderid,
+            number=kwargs['build_number'])
+        return None if not build else build['id']
 
     @defer.inlineCallbacks
     def getStepid(self, kwargs):
         if 'stepid' in kwargs:
             return kwargs['stepid']
-        else:
-            buildid = yield self.getBuildid(kwargs)
-            if buildid is None:
-                return None
+        buildid = yield self.getBuildid(kwargs)
+        if buildid is None:
+            return None
 
-            dbdict = yield self.master.db.steps.getStep(buildid=buildid,
-                                                        number=kwargs.get(
-                                                            'step_number'),
-                                                        name=kwargs.get('step_name'))
-            if not dbdict:
-                return None
-            return dbdict['id']
+        dbdict = yield self.master.db.steps.getStep(buildid=buildid,
+                                                    number=kwargs.get(
+                                                        'step_number'),
+                                                    name=kwargs.get('step_name'))
+        return None if not dbdict else dbdict['id']
 
     def getBuilderId(self, kwargs):
         if 'buildername' in kwargs:

@@ -120,8 +120,7 @@ class HTTPStep(BuildStep):
             requestkwargs['params'] = params
             for k, v in params:
                 yield log.addHeader(f'\t{k}: {v}\n')
-        data = requestkwargs.get("data", None)
-        if data:
+        if data := requestkwargs.get("data", None):
             yield log.addHeader('Data:\n')
             if isinstance(data, dict):
                 for k, v in data.items():
@@ -146,10 +145,7 @@ class HTTPStep(BuildStep):
         yield log.finish()
 
         self.descriptionDone = [f"Status code: {r.status_code}"]
-        if r.status_code < 400:
-            return SUCCESS
-        else:
-            return FAILURE
+        return SUCCESS if r.status_code < 400 else FAILURE
 
     @defer.inlineCallbacks
     def log_response(self, log, response):

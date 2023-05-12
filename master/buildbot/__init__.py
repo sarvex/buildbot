@@ -33,15 +33,15 @@ def gitDescribeToPep440(version):
     VERSION_MATCH = re.compile(r'(?P<major>\d+)\.(?P<minor>\d+)\.(?P<patch>\d+)(\.post(?P<post>\d+))?(-(?P<dev>\d+))?(-g(?P<commit>.+))?')  # noqa pylint: disable=line-too-long
     v = VERSION_MATCH.search(version)
     if v:
-        major = int(v.group('major'))
-        minor = int(v.group('minor'))
-        patch = int(v.group('patch'))
-        if v.group('dev'):
+        major = int(v['major'])
+        minor = int(v['minor'])
+        patch = int(v['patch'])
+        if v['dev']:
             patch += 1
-            dev = int(v.group('dev'))
+            dev = int(v['dev'])
             return f"{major}.{minor}.{patch}-dev{dev}"
-        if v.group('post'):
-            return f"{major}.{minor}.{patch}.post{v.group('post')}"
+        if v['post']:
+            return f"{major}.{minor}.{patch}.post{v['post']}"
         return f"{major}.{minor}.{patch}"
 
     return v
@@ -70,13 +70,9 @@ def getVersionFromArchiveId(git_archive_id='$Format:%ct %d$'):
     """
     # mangle the magic string to make sure it is not replaced by git archive
     if not git_archive_id.startswith('$For' + 'mat:'):
-        # source was modified by git archive, try to parse the version from
-        # the value of git_archive_id
-
-        match = re.search(r'tag:\s*v([^,)]+)', git_archive_id)
-        if match:
+        if match := re.search(r'tag:\s*v([^,)]+)', git_archive_id):
             # archived revision is tagged, use the tag
-            return gitDescribeToPep440(match.group(1))
+            return gitDescribeToPep440(match[1])
 
         # archived revision is not tagged, use the commit date
         tstamp = git_archive_id.strip().split()[0]
@@ -113,8 +109,7 @@ def getVersion(init_file):
         out = p.communicate()[0]
 
         if (not p.returncode) and out:
-            v = gitDescribeToPep440(str(out))
-            if v:
+            if v := gitDescribeToPep440(str(out)):
                 return v
     except OSError:
         pass

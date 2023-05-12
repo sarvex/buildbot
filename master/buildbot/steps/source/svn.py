@@ -95,8 +95,7 @@ class SVN(Source):
 
         if patch:
             yield self.patch(patch)
-        res = yield self.parseGotRevision()
-        return res
+        return (yield self.parseGotRevision())
 
     @defer.inlineCallbacks
     def mode_full(self):
@@ -233,7 +232,7 @@ class SVN(Source):
             return self.method
         elif self.mode == 'incremental':
             return None
-        elif self.method is None and self.mode == 'full':
+        elif self.mode == 'full':
             return 'fresh'
         return None
 
@@ -371,8 +370,7 @@ class SVN(Source):
     def computeSourceRevision(self, changes):
         if not changes or None in [c.revision for c in changes]:
             return None
-        lastChange = max(int(c.revision) for c in changes)
-        return lastChange
+        return max(int(c.revision) for c in changes)
 
     @staticmethod
     def svnUriCanonicalize(uri):
@@ -427,10 +425,7 @@ class SVN(Source):
         checkout_cmd = ['checkout', self.repourl, '.']
         if self.revision:
             checkout_cmd.extend(["--revision", str(self.revision)])
-        if self.retry:
-            abandonOnFailure = (self.retry[1] <= 0)
-        else:
-            abandonOnFailure = True
+        abandonOnFailure = (self.retry[1] <= 0) if self.retry else True
         res = yield self._dovccmd(checkout_cmd, abandonOnFailure=abandonOnFailure)
 
         if self.retry:

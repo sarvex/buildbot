@@ -67,10 +67,7 @@ class PushjetNotifier(ReporterBase):
 
         yield super().reconfigService(generators=generators)
         self.secret = secret
-        if levels is None:
-            self.levels = {}
-        else:
-            self.levels = levels
+        self.levels = {} if levels is None else levels
         self._http = yield httpclientservice.HTTPClientService.getService(
             self.master, base_url)
 

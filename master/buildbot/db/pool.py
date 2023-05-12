@@ -198,41 +198,37 @@ class DBThreadPool:
         backoff = self.BACKOFF_START
         start = time.time()
         while True:
-            if with_engine:
-                arg = self.engine
-            else:
-                arg = self.engine.connect()
+            arg = self.engine if with_engine else self.engine.connect()
             try:
-                try:
-                    rv = callable(arg, *args, **kwargs)
-                    assert not isinstance(rv, self.forbidded_callable_return_type), \
+                rv = callable(arg, *args, **kwargs)
+                assert not isinstance(rv, self.forbidded_callable_return_type), \
                         "do not return ResultProxy objects!"
-                except sa.exc.OperationalError as e:
-                    if not self.engine.should_retry(e):
-                        log.err(e, 'Got fatal OperationalError on DB')
-                        raise
-                    elapsed = time.time() - start
-                    if elapsed > self.MAX_OPERATIONALERROR_TIME:
-                        log.err(e, f'Raising due to {self.MAX_OPERATIONALERROR_TIME} '
-                                'seconds delay on DB query retries')
-                        raise
-
-                    metrics.MetricCountEvent.log(
-                        "DBThreadPool.retry-on-OperationalError")
-                    # sleep (remember, we're in a thread..)
-                    time.sleep(backoff)
-                    backoff *= self.BACKOFF_MULT
-                    # and re-try
-                    log.err(e, f'retrying {callable} after sql error {e}')
-                    continue
-                except Exception as e:
-                    # AlreadyClaimedError are normal especially in a multimaster
-                    # configuration
-                    if not isinstance(e,
-                        (AlreadyClaimedError, ChangeSourceAlreadyClaimedError,
-                         SchedulerAlreadyClaimedError, AlreadyCompleteError)):
-                        log.err(e, 'Got fatal Exception on DB')
+            except sa.exc.OperationalError as e:
+                if not self.engine.should_retry(e):
+                    log.err(e, 'Got fatal OperationalError on DB')
                     raise
+                elapsed = time.time() - start
+                if elapsed > self.MAX_OPERATIONALERROR_TIME:
+                    log.err(e, f'Raising due to {self.MAX_OPERATIONALERROR_TIME} '
+                            'seconds delay on DB query retries')
+                    raise
+
+                metrics.MetricCountEvent.log(
+                    "DBThreadPool.retry-on-OperationalError")
+                # sleep (remember, we're in a thread..)
+                time.sleep(backoff)
+                backoff *= self.BACKOFF_MULT
+                # and re-try
+                log.err(e, f'retrying {callable} after sql error {e}')
+                continue
+            except Exception as e:
+                # AlreadyClaimedError are normal especially in a multimaster
+                # configuration
+                if not isinstance(e,
+                    (AlreadyClaimedError, ChangeSourceAlreadyClaimedError,
+                     SchedulerAlreadyClaimedError, AlreadyCompleteError)):
+                    log.err(e, 'Got fatal Exception on DB')
+                raise
             finally:
                 if not with_engine:
                     arg.close()
@@ -241,17 +237,19 @@ class DBThreadPool:
 
     @defer.inlineCallbacks
     def do(self, callable, *args, **kwargs):
-        ret = yield threads.deferToThreadPool(self.reactor, self._pool,
-                                              self.__thd, False, callable,
-                                              args, kwargs)
-        return ret
+        return (
+            yield threads.deferToThreadPool(
+                self.reactor, self._pool, self.__thd, False, callable, args, kwargs
+            )
+        )
 
     @defer.inlineCallbacks
     def do_with_engine(self, callable, *args, **kwargs):
-        ret = yield threads.deferToThreadPool(self.reactor, self._pool,
-                                              self.__thd, True, callable,
-                                              args, kwargs)
-        return ret
+        return (
+            yield threads.deferToThreadPool(
+                self.reactor, self._pool, self.__thd, True, callable, args, kwargs
+            )
+        )
 
     def get_sqlite_version(self):
         return sqlite3.sqlite_version_info

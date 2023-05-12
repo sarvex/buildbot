@@ -86,9 +86,7 @@ class MySQLStrategy(Strategy):
     deadlock_error_codes = (1213,)
 
     def in_error_codes(self, args, error_codes):
-        if args:
-            return args[0] in error_codes
-        return False
+        return args[0] in error_codes if args else False
 
     def is_disconnect(self, args):
         return self.in_error_codes(args, self.disconnect_error_codes)

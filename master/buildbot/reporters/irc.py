@@ -77,11 +77,12 @@ class IRCChannel(Channel):
         self.muted = False
 
     def send(self, message, **kwargs):
-        if self.id[0] in irc.CHANNEL_PREFIXES:
-            send = self.bot.groupSend
-        else:
-            send = self.bot.msg
         if not self.muted:
+            send = (
+                self.bot.groupSend
+                if self.id[0] in irc.CHANNEL_PREFIXES
+                else self.bot.msg
+            )
             send(self.id, message)
 
     def act(self, action):
@@ -105,7 +106,7 @@ class IRCContact(Contact):
         # buildbot (like '/me kicks buildbot'). 'self.user' is the name/nick/id of
         # the person who performed the action, so if their action provokes a
         # response, they can be named.  This is 100% silly.
-        if not action.endswith("s " + self.bot.nickname):
+        if not action.endswith(f"s {self.bot.nickname}"):
             return
         words = action.split()
         verb = words[-2]
@@ -240,7 +241,7 @@ class IrcStatusBot(StatusBot, irc.IRCClient):
         nick = self.nickname.encode()
         passwd = self.password.encode()
         code = base64.b64encode(nick + b'\0' + nick + b'\0' + passwd)
-        self.sendLine("AUTHENTICATE " + code.decode())
+        self.sendLine(f"AUTHENTICATE {code.decode()}")
         self.sendLine("CAP END")
 
     def connectionMade(self):
@@ -277,15 +278,13 @@ class IrcStatusBot(StatusBot, irc.IRCClient):
         if channel == self.nickname:
             # private message
             contact = self.getContact(user=user)
-            d = contact.handleMessage(message)
-            return d
+            return contact.handleMessage(message)
         # else it's a broadcast message, maybe for us, maybe not. 'channel'
         # is '#twisted' or the like.
         contact = self.getContact(user=user, channel=channel)
         if message.startswith(f"{self.nickname}:") or message.startswith(f"{self.nickname},"):
             message = message[len(f"{self.nickname}:"):]
-            d = contact.handleMessage(message)
-            return d
+            return contact.handleMessage(message)
         return None
 
     def action(self, user, channel, data):
@@ -297,7 +296,7 @@ class IrcStatusBot(StatusBot, irc.IRCClient):
 
     def signedOn(self):
         if self.password:
-            self.msg("Nickserv", "IDENTIFY " + self.password)
+            self.msg("Nickserv", f"IDENTIFY {self.password}")
         for c in self.join_channels:
             if isinstance(c, dict):
                 channel = c.get('channel', None)
@@ -491,8 +490,7 @@ class IRC(service.BuildbotService):
                     useSASL=False, lostDelay=None, failedDelay=None, useColors=True,
                     allowShutdown=None, noticeOnChannel=False, authz=None, **kwargs
                     ):
-        deprecated_params = list(kwargs)
-        if deprecated_params:
+        if deprecated_params := list(kwargs):
             config.error(f'{",".join(deprecated_params)} are deprecated')
 
         # deprecated
@@ -537,10 +535,7 @@ class IRC(service.BuildbotService):
             pm_to_nicks = []
         self.pm_to_nicks = pm_to_nicks
         self.password = password
-        if authz is None:
-            self.authz = {}
-        else:
-            self.authz = authz
+        self.authz = {} if authz is None else authz
         self.useRevisions = useRevisions
         self.tags = tags
         if notify_events is None:

@@ -232,14 +232,8 @@ class Try_Jobdir(TryBase):
                 "incoming Try job did not specify any allowed builder names")
             return defer.succeed(None)
 
-        who = ""
-        if parsed_job['who']:
-            who = parsed_job['who']
-
-        comment = ""
-        if parsed_job['comment']:
-            comment = parsed_job['comment']
-
+        who = parsed_job['who'] if parsed_job['who'] else ""
+        comment = parsed_job['comment'] if parsed_job['comment'] else ""
         sourcestamp = dict(branch=parsed_job['branch'],
                            codebase='',
                            revision=parsed_job['baserev'],
@@ -438,9 +432,7 @@ class Try_Userpass_Perspective(pbutil.NewCredPerspective):
             sourcestamps=[sourcestamp], reason=reason,
             properties=requested_props, builderNames=builderNames)
 
-        # return a remotely-usable BuildSetStatus object
-        bss = RemoteBuildSetStatus(self.scheduler.master, bsid, brids)
-        return bss
+        return RemoteBuildSetStatus(self.scheduler.master, bsid, brids)
 
     def perspective_getAvailableBuilderNames(self):
         # Return a list of builder names that are configured

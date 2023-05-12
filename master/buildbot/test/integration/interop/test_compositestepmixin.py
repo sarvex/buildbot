@@ -81,15 +81,15 @@ class CompositeStepMixinMaster(RunMasterBase):
 
     @defer.inlineCallbacks
     def setup_config(self, is_list_mkdir=True, is_list_rmdir=True):
-        c = {}
         from buildbot.config import BuilderConfig
         from buildbot.process.factory import BuildFactory
         from buildbot.plugins import schedulers
 
-        c['schedulers'] = [
-            schedulers.AnyBranchScheduler(name="sched", builderNames=["testy"])
-        ]
-
+        c = {
+            'schedulers': [
+                schedulers.AnyBranchScheduler(name="sched", builderNames=["testy"])
+            ]
+        }
         f = BuildFactory()
         f.addStep(TestCompositeMixinStep(is_list_mkdir=is_list_mkdir,
                                          is_list_rmdir=is_list_rmdir))

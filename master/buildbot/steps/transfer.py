@@ -244,8 +244,7 @@ class DirectoryUpload(_TransferBuildStep):
             args['workersrc'] = source
 
         cmd = makeStatusRemoteCommand(self, 'uploadDirectory', args)
-        res = yield self.runTransferCommand(cmd, dirWriter)
-        return res
+        return (yield self.runTransferCommand(cmd, dirWriter))
 
 
 class MultipleFileUpload(_TransferBuildStep, CompositeStepMixin):
@@ -475,8 +474,7 @@ class FileDownload(_TransferBuildStep):
             args['workerdest'] = workerdest
 
         cmd = makeStatusRemoteCommand(self, 'downloadFile', args)
-        res = yield self.runTransferCommand(cmd)
-        return res
+        return (yield self.runTransferCommand(cmd))
 
 
 class StringDownload(_TransferBuildStep):
@@ -533,8 +531,7 @@ class StringDownload(_TransferBuildStep):
             args['workerdest'] = workerdest
 
         cmd = makeStatusRemoteCommand(self, 'downloadFile', args)
-        res = yield self.runTransferCommand(cmd)
-        return res
+        return (yield self.runTransferCommand(cmd))
 
 
 class JSONStringDownload(StringDownload):
@@ -554,8 +551,7 @@ class JSONStringDownload(StringDownload):
     @defer.inlineCallbacks
     def run(self):
         self.s = json.dumps(self.s)
-        res = yield super().run()
-        return res
+        return (yield super().run())
 
 
 class JSONPropertiesDownload(StringDownload):
@@ -575,15 +571,11 @@ class JSONPropertiesDownload(StringDownload):
     @defer.inlineCallbacks
     def run(self):
         properties = self.build.getProperties()
-        props = {}
-        for key, value, _ in properties.asList():
-            props[key] = value
-
+        props = {key: value for key, value, _ in properties.asList()}
         self.s = json.dumps(dict(
             properties=props,
             sourcestamps=[ss.asDict()
                           for ss in self.build.getAllSourceStamps()],
         ),
         )
-        res = yield super().run()
-        return res
+        return (yield super().run())

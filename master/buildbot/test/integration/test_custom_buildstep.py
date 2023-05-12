@@ -93,8 +93,7 @@ class RunSteps(RunFakeMasterTestCase):
         }
 
         yield self.setup_master(config_dict)
-        builder_id = yield self.master.data.updates.findBuilderId('builder')
-        return builder_id
+        return (yield self.master.data.updates.findBuilderId('builder'))
 
     @defer.inlineCallbacks
     def test_step_raising_buildstepfailed_in_start(self):

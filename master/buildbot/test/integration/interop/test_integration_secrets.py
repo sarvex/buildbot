@@ -35,7 +35,6 @@ class SecretsConfig(RunMasterBase):
 
     @defer.inlineCallbacks
     def setup_config(self, use_interpolation):
-        c = {}
         from buildbot.config import BuilderConfig
         from buildbot.process.factory import BuildFactory
         from buildbot.plugins import schedulers, steps, util
@@ -43,12 +42,12 @@ class SecretsConfig(RunMasterBase):
         fake_reporter = FakeSecretReporter('http://example.com/hook',
                                            auth=('user', Interpolate('%(secret:httppasswd)s')))
 
-        c['services'] = [fake_reporter]
-        c['schedulers'] = [
-            schedulers.ForceScheduler(
-                name="force",
-                builderNames=["testy"])]
-
+        c = {
+            'services': [fake_reporter],
+            'schedulers': [
+                schedulers.ForceScheduler(name="force", builderNames=["testy"])
+            ],
+        }
         c['secretsProviders'] = [FakeSecretStorage(secretdict={"foo": "secretvalue",
                                                                "something": "more",
                                                                'httppasswd': 'myhttppasswd'})]

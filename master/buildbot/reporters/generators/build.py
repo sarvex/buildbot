@@ -73,8 +73,7 @@ class BuildStatusGenerator(BuildStatusGeneratorMixin):
         if not is_new and not self.is_message_needed_by_results(build):
             return None
 
-        report = yield self.build_message(self.formatter, master, reporter, build)
-        return report
+        return (yield self.build_message(self.formatter, master, reporter, build))
 
     def _want_previous_build(self):
         return "change" in self.mode or "problem" in self.mode
@@ -117,5 +116,4 @@ class BuildStartEndStatusGenerator(BuildStatusGeneratorMixin):
         if not self.is_message_needed_by_props(build):
             return None
 
-        report = yield self.build_message(formatter, master, reporter, build)
-        return report
+        return (yield self.build_message(formatter, master, reporter, build))

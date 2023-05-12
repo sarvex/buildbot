@@ -22,7 +22,7 @@ class FakePrivateTemporaryDirectory:
         prefix = prefix or ''
         suffix = suffix or ''
 
-        self.name = os.path.join(dir, prefix + '@@@' + suffix)
+        self.name = os.path.join(dir, f'{prefix}@@@{suffix}')
         self.mode = mode
 
     def __enter__(self):

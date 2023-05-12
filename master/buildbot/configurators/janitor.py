@@ -91,19 +91,19 @@ class JanitorConfigurator(ConfiguratorBase):
         kwargs = self.kwargs
 
         super().configure(config_dict)
-        nightly_kwargs = {}
-
-        # we take the defaults of Nightly, except for hour
-        for arg in ('minute', 'dayOfMonth', 'month', 'dayOfWeek'):
-            if arg in kwargs:
-                nightly_kwargs[arg] = kwargs[arg]
-
+        nightly_kwargs = {
+            arg: kwargs[arg]
+            for arg in ('minute', 'dayOfMonth', 'month', 'dayOfWeek')
+            if arg in kwargs
+        }
         self.schedulers.append(Nightly(
             name=JANITOR_NAME, builderNames=[JANITOR_NAME], hour=hour, **nightly_kwargs))
 
-        self.schedulers.append(ForceScheduler(
-            name=JANITOR_NAME + "_force",
-            builderNames=[JANITOR_NAME]))
+        self.schedulers.append(
+            ForceScheduler(
+                name=f"{JANITOR_NAME}_force", builderNames=[JANITOR_NAME]
+            )
+        )
 
         self.builders.append(BuilderConfig(
             name=JANITOR_NAME, workername=JANITOR_NAME, factory=BuildFactory(steps=steps)

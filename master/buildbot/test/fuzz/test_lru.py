@@ -26,11 +26,11 @@ from buildbot.util import lru
 
 
 def short(k):
-    return set([k.upper() * 3])
+    return {k.upper() * 3}
 
 
 def long(k):
-    return set([k.upper() * 6])
+    return {k.upper() * 6}
 
 
 def deferUntilLater(secs, result=None):
@@ -59,8 +59,8 @@ class LRUCacheFuzzer(fuzz.FuzzTestCase):
         lru.inv_failed = False
 
         def delayed_miss_fn(key):
-            return deferUntilLater(random.uniform(0.001, 0.002),
-                                   set([key + 1000]))
+            return deferUntilLater(random.uniform(0.001, 0.002), {key + 1000})
+
         self.lru = lru.AsyncLRUCache(delayed_miss_fn, 50)
 
         keys = list(range(250))
@@ -75,10 +75,11 @@ class LRUCacheFuzzer(fuzz.FuzzTestCase):
             d = self.lru.get(key)
 
             def check(result, key):
-                self.assertEqual(result, set([key + 1000]))
+                self.assertEqual(result, {key + 1000})
                 if random.uniform(0, 1.0) < 0.9:
                     results.append(result)
                     results[:-100] = []
+
             d.addCallback(check, key)
 
             @d.addErrback

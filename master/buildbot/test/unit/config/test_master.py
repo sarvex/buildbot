@@ -256,11 +256,9 @@ class MasterConfigTests(ConfigErrorsMixin, dirs.DirsMixin, unittest.TestCase):
             user_managers=[],
             revlink=revlinks.default_revlink_matcher
         )
-        expected.update(global_defaults)
+        expected |= global_defaults
         expected['buildbotNetUsageData'] = 'basic'
-        got = {
-            attr: getattr(cfg, attr)
-            for attr, exp in expected.items()}
+        got = {attr: getattr(cfg, attr) for attr in expected}
         got = interfaces.IConfigured(got).getConfigDict()
         expected = interfaces.IConfigured(expected).getConfigDict()
         self.assertEqual(got, expected)
@@ -363,9 +361,7 @@ class MasterConfig_loaders(ConfigErrorsMixin, unittest.TestCase):
     # utils
 
     def assertResults(self, **expected):
-        got = {
-            attr: getattr(self.cfg, attr)
-            for attr, exp in expected.items()}
+        got = {attr: getattr(self.cfg, attr) for attr in expected}
         got = interfaces.IConfigured(got).getConfigDict()
         expected = interfaces.IConfigured(expected).getConfigDict()
 
@@ -1300,8 +1296,7 @@ class FakeMultiService(service.ReconfigurableServiceMixin,
 
     def reconfigServiceWithBuildbotConfig(self, new_config):
         self.called = True
-        d = super().reconfigServiceWithBuildbotConfig(new_config)
-        return d
+        return super().reconfigServiceWithBuildbotConfig(new_config)
 
 
 class ReconfigurableServiceMixin(unittest.TestCase):

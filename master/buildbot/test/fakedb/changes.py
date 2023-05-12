@@ -112,11 +112,7 @@ class FakeChangesComponent(FakeDBComponent):
         if properties is None:
             properties = {}
 
-        if self.changes:
-            changeid = max(list(self.changes)) + 1
-        else:
-            changeid = 500
-
+        changeid = max(list(self.changes)) + 1 if self.changes else 500
         ssid = yield self.db.sourcestamps.findSourceStampId(
             revision=revision, branch=branch, repository=repository,
             codebase=codebase, project=project)
@@ -195,9 +191,11 @@ class FakeChangesComponent(FakeDBComponent):
             "Please patch in tests to return appropriate results")
 
     def getChangeFromSSid(self, ssid):
-        chdicts = [self._chdict(v) for v in self.changes.values()
-                   if v['sourcestampid'] == ssid]
-        if chdicts:
+        if chdicts := [
+            self._chdict(v)
+            for v in self.changes.values()
+            if v['sourcestampid'] == ssid
+        ]:
             return defer.succeed(chdicts[0])
         return defer.succeed(None)
 
@@ -236,10 +234,7 @@ class FakeChangesComponent(FakeDBComponent):
 
     def fakeAddChangeInstance(self, change):
         if not hasattr(change, 'number') or not change.number:
-            if self.changes:
-                changeid = max(list(self.changes)) + 1
-            else:
-                changeid = 500
+            changeid = max(list(self.changes)) + 1 if self.changes else 500
         else:
             changeid = change.number
 

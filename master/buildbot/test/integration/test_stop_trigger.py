@@ -43,15 +43,14 @@ class TriggeringMaster(RunMasterBase):
 
     @defer.inlineCallbacks
     def setup_trigger_config(self, triggeredFactory, nextBuild=None):
-        c = {}
-
-        c['schedulers'] = [
-            schedulers.Triggerable(
-                name="trigsched",
-                builderNames=["triggered"]),
-            schedulers.AnyBranchScheduler(
-                name="sched",
-                builderNames=["main"])]
+        c = {
+            'schedulers': [
+                schedulers.Triggerable(
+                    name="trigsched", builderNames=["triggered"]
+                ),
+                schedulers.AnyBranchScheduler(name="sched", builderNames=["main"]),
+            ]
+        }
 
         f = BuildFactory()
         f.addStep(steps.Trigger(schedulerNames=['trigsched'],

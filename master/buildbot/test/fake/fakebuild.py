@@ -64,23 +64,19 @@ class FakeBuild(properties.PropertiesMixin):
         return self.properties
 
     def getSourceStamp(self, codebase):
-        if codebase in self.sources:
-            return self.sources[codebase]
-        return None
+        return self.sources[codebase] if codebase in self.sources else None
 
     def getAllSourceStamps(self):
         return list(self.sources.values())
 
     def allChanges(self):
         for s in self.sources.values():
-            for c in s.changes:
-                yield c
+            yield from s.changes
 
     def allFiles(self):
         files = []
         for c in self.allChanges():
-            for f in c.files:
-                files.append(f)
+            files.extend(iter(c.files))
         return files
 
     def getBuilder(self):
@@ -96,9 +92,7 @@ class FakeBuild(properties.PropertiesMixin):
 class FakeBuildForRendering:
     def render(self, r):
         if isinstance(r, str):
-            return "rendered:" + r
+            return f"rendered:{r}"
         if isinstance(r, list):
-            return list(self.render(i) for i in r)
-        if isinstance(r, tuple):
-            return tuple(self.render(i) for i in r)
-        return r
+            return [self.render(i) for i in r]
+        return tuple(self.render(i) for i in r) if isinstance(r, tuple) else r

@@ -25,18 +25,26 @@ def statusToString(status, count=1):
         return "not finished"
     if status < 0 or status >= len(Results):
         return "Invalid status"
-    if count > 1:
-        return MultipleResults[status]
-    return Results[status]
+    return MultipleResults[status] if count > 1 else Results[status]
 
 
 def worst_status(a, b):
-    # SKIPPED > SUCCESS > WARNINGS > FAILURE > EXCEPTION > RETRY > CANCELLED
-    # CANCELLED needs to be considered the worst.
-    for s in (CANCELLED, RETRY, EXCEPTION, FAILURE, WARNINGS, SUCCESS, SKIPPED):
-        if s in (a, b):
-            return s
-    return None
+    return next(
+        (
+            s
+            for s in (
+                CANCELLED,
+                RETRY,
+                EXCEPTION,
+                FAILURE,
+                WARNINGS,
+                SUCCESS,
+                SKIPPED,
+            )
+            if s in (a, b)
+        ),
+        None,
+    )
 
 
 def computeResultAndTermination(obj, result, previousResult):
@@ -52,10 +60,7 @@ def computeResultAndTermination(obj, result, previousResult):
         if obj.haltOnFailure:
             terminate = True
     elif result == WARNINGS:
-        if not obj.warnOnWarnings:
-            possible_overall_result = SUCCESS
-        else:
-            possible_overall_result = WARNINGS
+        possible_overall_result = SUCCESS if not obj.warnOnWarnings else WARNINGS
         if obj.flunkOnWarnings:
             possible_overall_result = FAILURE
     elif result in (EXCEPTION, RETRY, CANCELLED):

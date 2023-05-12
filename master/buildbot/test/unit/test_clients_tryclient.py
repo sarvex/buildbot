@@ -128,8 +128,8 @@ class createJobfile(unittest.TestCase):
         self.assertEqual(len(rmt.transport.writes), 1)
         self.assertFalse(isinstance(rmt.transport.writes[0], str))
         for streamname in "out", "err":
-            sys_streamattr = "std" + streamname
-            rmt_methodattr = streamname + "Received"
+            sys_streamattr = f"std{streamname}"
+            rmt_methodattr = f"{streamname}Received"
             teststream = self.RemoteTryPP_TestStream()
             saved_stream = getattr(sys, sys_streamattr)
             try:

@@ -14,7 +14,7 @@ def parse_chrome_major_version(output):
         # Google Chrome 70.0.3538.77
         m = re.match(r'.*[cC]hrom.*\s(\d+)\.(\d+)\.(\d+)(?:\.\d+|).*', line)
         if m is not None:
-            return int(m.group(1)), int(m.group(2)), int(m.group(3))
+            return int(m[1]), int(m[2]), int(m[3])
     return None
 
 
@@ -57,7 +57,7 @@ def main():
         if chrome_major >= 73:
             # webdriver manager requires us to provide the 4th version component, however does not
             # use it when picking the version to download
-            chromedriver_version = '{}.{}.{}.0'.format(chrome_major, chrome_minor, chrome_patch)
+            chromedriver_version = f'{chrome_major}.{chrome_minor}.{chrome_patch}.0'
         else:
             chrome_major_to_chromedriver = {
                 73: '2.46',
@@ -67,8 +67,9 @@ def main():
                 69: '2.44',
             }
             if chrome_major not in chrome_major_to_chromedriver:
-                raise Exception('Unknown Chrome version {}.{}.{}'.format(
-                    chrome_major, chrome_minor, chrome_patch))
+                raise Exception(
+                    f'Unknown Chrome version {chrome_major}.{chrome_minor}.{chrome_patch}'
+                )
             chromedriver_version = chrome_major_to_chromedriver[chrome_major]
 
         print('Using chromedriver release {0}'.format(chromedriver_version))
@@ -82,10 +83,10 @@ def main():
         return
 
     except Exception as e:
-        print(str(e))
+        print(e)
         print('Failed to get compatible chromedriver version, using latest')
 
-    check_call([args.manager + ' update'], shell=True)
+    check_call([f'{args.manager} update'], shell=True)
 
 
 if __name__ == '__main__':

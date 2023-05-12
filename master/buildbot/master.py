@@ -256,7 +256,7 @@ class BuildMaster(service.ReconfigurableServiceMixin, service.MasterService):
             except config.ConfigErrors as e:
                 log.msg("Configuration Errors:")
                 for msg in e.errors:
-                    log.msg("  " + msg)
+                    log.msg(f"  {msg}")
                 log.msg("Halting master.")
                 self.reactor.stop()
                 return

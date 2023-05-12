@@ -80,10 +80,10 @@ class DbConfig:
             ret = db.state.thdGetState(
                 db.pool.engine, self.objectid, name, default=default)
             db.pool.engine.dispose()
-        else:
-            if default is not state.StateConnectorComponent.Thunk:
-                return default
+        elif default is state.StateConnectorComponent.Thunk:
             raise KeyError("Db not yet initialized")
+        else:
+            return default
         return ret
 
     def set(self, name, value):

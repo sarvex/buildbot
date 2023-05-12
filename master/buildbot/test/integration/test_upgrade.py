@@ -154,8 +154,8 @@ class UpgradeTestMixin(db.RealDatabaseMixin, TestReactorMixin):
                 if exp != got:
                     got_names = {idx['name'] for idx in got}
                     exp_names = {idx['name'] for idx in exp}
-                    got_info = dict((idx['name'], idx) for idx in got)
-                    exp_info = dict((idx['name'], idx) for idx in exp)
+                    got_info = {idx['name']: idx for idx in got}
+                    exp_info = {idx['name']: idx for idx in exp}
                     for name in got_names - exp_names:
                         diff.append(f"got unexpected index {name} on table {tbl.name}: "
                                     f"{repr(got_info[name])}")
@@ -169,9 +169,7 @@ class UpgradeTestMixin(db.RealDatabaseMixin, TestReactorMixin):
                         if gi != ei:
                             diff.append(f"index {name} on table {tbl.name} differs: "
                                         f"got {gi}; exp {ei}")
-            if diff:
-                return "\n".join(diff)
-            return None
+            return "\n".join(diff) if diff else None
 
         try:
             diff = yield self.db.pool.do_with_engine(comp)
@@ -187,19 +185,19 @@ class UpgradeTestMixin(db.RealDatabaseMixin, TestReactorMixin):
             self.fail("\n" + pprint.pformat(diff))
 
     def gotError(self, e):
-        if isinstance(e, (sqlite3.DatabaseError, DatabaseError)):
-            if "file is encrypted or is not a database" in str(e):
-                self.flushLoggedErrors(sqlite3.DatabaseError)
-                self.flushLoggedErrors(DatabaseError)
-                raise unittest.SkipTest(f"sqlite dump not readable on this machine {str(e)}")
+        if isinstance(
+            e, (sqlite3.DatabaseError, DatabaseError)
+        ) and "file is encrypted or is not a database" in str(e):
+            self.flushLoggedErrors(sqlite3.DatabaseError)
+            self.flushLoggedErrors(DatabaseError)
+            raise unittest.SkipTest(f"sqlite dump not readable on this machine {str(e)}")
 
     @defer.inlineCallbacks
     def do_test_upgrade(self, pre_callbacks=None):
         if pre_callbacks is None:
             pre_callbacks = []
 
-        for cb in pre_callbacks:
-            yield cb
+        yield from pre_callbacks
         try:
             yield self.db.model.upgrade()
         except Exception as e:

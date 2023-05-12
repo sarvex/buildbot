@@ -23,7 +23,7 @@ def main():
     os.system("git fetch https://github.com/buildbot/buildbot master")
     os.system("git checkout FETCH_HEAD -B gather_dependabot")
     s = requests.Session()
-    s.headers.update({'Authorization': 'token ' + token})
+    s.headers.update({'Authorization': f'token {token}'})
     r = s.get("https://api.github.com/repos/buildbot/buildbot/pulls")
     r.raise_for_status()
     prs = r.json()

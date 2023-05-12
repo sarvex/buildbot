@@ -61,10 +61,7 @@ class BuildChooserBase:
         # Return the next build, as a (worker, [breqs]) pair
 
         worker, breq = yield self.popNextBuild()
-        if not worker or not breq:
-            return (None, None)
-
-        return (worker, [breq])
+        return (None, None) if not worker or not breq else (worker, [breq])
 
     # Must be implemented by subclass
     def popNextBuild(self):
@@ -112,10 +109,14 @@ class BuildChooserBase:
             return None
 
         brid = breq.id
-        for brdict in self.unclaimedBrdicts:
-            if brid == brdict['buildrequestid']:
-                return brdict
-        return None
+        return next(
+            (
+                brdict
+                for brdict in self.unclaimedBrdicts
+                if brid == brdict['buildrequestid']
+            ),
+            None,
+        )
 
     def _removeBuildRequest(self, breq):
         # Remove a BuildrRequest object (and its brdict)
@@ -240,9 +241,7 @@ class BasicBuildChooser(BuildChooserBase):
     def _popNextWorker(self, buildrequest):
         # use 'preferred' workers first, if we have some ready
         if self.preferredWorkers:
-            worker = self.preferredWorkers.pop(0)
-            return worker
-
+            return self.preferredWorkers.pop(0)
         while self.workerpool:
             try:
                 worker = yield self.nextWorker(self.bldr, self.workerpool, buildrequest)

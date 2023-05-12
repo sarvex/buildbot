@@ -147,20 +147,14 @@ class Darcs(Source):
 
         if self.revision:
             yield self.downloadFileContentToWorker('.darcs-context', self.revision)
-            command.append('--context')
-            command.append('.darcs-context')
-
+            command.extend(('--context', '.darcs-context'))
         command.append(self.repourl)
         yield self._dovccmd(command, abandonOnFailure=abandonOnFailure, wkdir='.')
 
     @defer.inlineCallbacks
     def _checkout(self):
 
-        if self.retry:
-            abandonOnFailure = (self.retry[1] <= 0)
-        else:
-            abandonOnFailure = True
-
+        abandonOnFailure = (self.retry[1] <= 0) if self.retry else True
         res = yield self._clone(abandonOnFailure)
 
         if self.retry:
@@ -204,9 +198,7 @@ class Darcs(Source):
         if abandonOnFailure and cmd.didFail():
             log.msg(f"Source step failed while running command {cmd}")
             raise buildstep.BuildStepFailed()
-        if collectStdout:
-            return cmd.stdout
-        return cmd.rc
+        return cmd.stdout if collectStdout else cmd.rc
 
     def _sourcedirIsUpdatable(self):
         return self.pathExists(self.build.path_module.join(self.workdir, '_darcs'))

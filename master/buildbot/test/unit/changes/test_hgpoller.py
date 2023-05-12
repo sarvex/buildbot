@@ -247,7 +247,7 @@ class TestHgPoller(TestHgPollerBase):
         # and one with explicit branches...
         other = hgpoller.HgPoller(
             self.remote_repo, branches=["b1", "b2"], workdir='/some/dir')
-        self.assertEqual(self.remote_repo + "_b1_b2", other.name)
+        self.assertEqual(f"{self.remote_repo}_b1_b2", other.name)
 
     def test_hgbin_default(self):
         self.assertEqual(self.poller.hgbin, "hg")

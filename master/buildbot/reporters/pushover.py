@@ -76,14 +76,8 @@ class PushoverNotifier(ReporterBase):
         yield super().reconfigService(generators=generators)
         self.user_key = user_key
         self.api_token = api_token
-        if priorities is None:
-            self.priorities = {}
-        else:
-            self.priorities = priorities
-        if otherParams is None:
-            self.otherParams = {}
-        else:
-            self.otherParams = otherParams
+        self.priorities = {} if priorities is None else priorities
+        self.otherParams = {} if otherParams is None else otherParams
         self._http = yield httpclientservice.HTTPClientService.getService(
             self.master, 'https://api.pushover.net')
 

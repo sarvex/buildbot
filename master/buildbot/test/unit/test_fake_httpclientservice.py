@@ -34,9 +34,7 @@ class myTestedService(service.BuildbotService):
         # note that at this point, only the http response headers are received
         if res.code != 200:
             raise Exception(f"{res.code}: server did not succeed")
-        res_json = yield res.json()
-        # res.json() returns a deferred to represent the time needed to fetch the entire body
-        return res_json
+        return (yield res.json())
 
 
 class Test(unittest.TestCase):

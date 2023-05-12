@@ -237,8 +237,6 @@ class UsersConnectorComponent(base.DBConnectorComponent):
 
             q = tbl.select(whereclause=(tbl.c.identifier == identifier))
             row = conn.execute(q).fetchone()
-            if not row:
-                return None
+            return None if not row else row.uid
 
-            return row.uid
         return self.db.pool.do(thd)

@@ -40,15 +40,15 @@ class TestVaultHvac(RunMasterBase):
 
     @defer.inlineCallbacks
     def setup_config(self, secret_specifier):
-        c = {}
         from buildbot.config import BuilderConfig
         from buildbot.process.factory import BuildFactory
         from buildbot.plugins import schedulers
 
-        c['schedulers'] = [
-            schedulers.ForceScheduler(name="force", builderNames=["testy"])
-        ]
-
+        c = {
+            'schedulers': [
+                schedulers.ForceScheduler(name="force", builderNames=["testy"])
+            ]
+        }
         # note that as of August 2021, the vault docker image default to kv
         # version 2 to be enabled by default
         c['secretsProviders'] = [

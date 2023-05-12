@@ -58,11 +58,11 @@ class HLint(buildstep.ShellMixin, buildstep.BuildStep):
 
     @defer.inlineCallbacks
     def run(self):
-        # create the command
-        html_files = set()
-        for f in self.build.allFiles():
-            if f.endswith(".xhtml") and not f.startswith("sandbox/"):
-                html_files.add(f)
+        html_files = {
+            f
+            for f in self.build.allFiles()
+            if f.endswith(".xhtml") and not f.startswith("sandbox/")
+        }
         # remove duplicates
         hlintTargets = sorted(list(html_files))
         if not hlintTargets:
@@ -89,9 +89,7 @@ class HLint(buildstep.ShellMixin, buildstep.BuildStep):
 
         self.descriptionDone = f"{self.warnings} hlin{self.warnings == 1 and 't' or 'ts'}"
 
-        if self.warnings:
-            return WARNINGS
-        return SUCCESS
+        return WARNINGS if self.warnings else SUCCESS
 
     def logConsumer(self):
         while True:
@@ -128,42 +126,29 @@ class TrialTestCaseCounter(logobserver.LogLineObserver):
 
         if line.startswith("=" * 40):
             self.finished = True
-        if not self.finished:
-            m = self._line_re.search(line.strip())
-            if m:
+        if m := self._line_re.search(line.strip()):
+            if not self.finished:
                 m.groups()
                 self.numTests += 1
                 self.step.setProgress('tests', self.numTests)
 
-        out = re.search(r'Ran (\d+) tests', line)
-        if out:
-            self.counts['total'] = int(out.group(1))
+        if out := re.search(r'Ran (\d+) tests', line):
+            self.counts['total'] = int(out[1])
         if (line.startswith("OK") or
             line.startswith("FAILED ") or
                 line.startswith("PASSED")):
-            # the extra space on FAILED_ is to distinguish the overall
-            # status from an individual test which failed. The lack of a
-            # space on the OK is because it may be printed without any
-            # additional text (if there are no skips,etc)
-            out = re.search(r'failures=(\d+)', line)
-            if out:
-                self.counts['failures'] = int(out.group(1))
-            out = re.search(r'errors=(\d+)', line)
-            if out:
-                self.counts['errors'] = int(out.group(1))
-            out = re.search(r'skips=(\d+)', line)
-            if out:
-                self.counts['skips'] = int(out.group(1))
-            out = re.search(r'expectedFailures=(\d+)', line)
-            if out:
-                self.counts['expectedFailures'] = int(out.group(1))
-            out = re.search(r'unexpectedSuccesses=(\d+)', line)
-            if out:
-                self.counts['unexpectedSuccesses'] = int(out.group(1))
-            # successes= is a Twisted-2.0 addition, and is not currently used
-            out = re.search(r'successes=(\d+)', line)
-            if out:
-                self.counts['successes'] = int(out.group(1))
+            if out := re.search(r'failures=(\d+)', line):
+                self.counts['failures'] = int(out[1])
+            if out := re.search(r'errors=(\d+)', line):
+                self.counts['errors'] = int(out[1])
+            if out := re.search(r'skips=(\d+)', line):
+                self.counts['skips'] = int(out[1])
+            if out := re.search(r'expectedFailures=(\d+)', line):
+                self.counts['expectedFailures'] = int(out[1])
+            if out := re.search(r'unexpectedSuccesses=(\d+)', line):
+                self.counts['unexpectedSuccesses'] = int(out[1])
+            if out := re.search(r'successes=(\d+)', line):
+                self.counts['successes'] = int(out[1])
 
 
 UNSPECIFIED = ()  # since None is a valid choice
@@ -330,9 +315,11 @@ class Trial(buildstep.ShellMixin, buildstep.BuildStep):
         # now that self.build.allFiles() is nailed down, finish building the
         # command
         if self.testChanges:
-            for f in self.build.allFiles():
-                if f.endswith(".py"):
-                    command.append(f"--testmodule={f}")
+            command.extend(
+                f"--testmodule={f}"
+                for f in self.build.allFiles()
+                if f.endswith(".py")
+            )
         else:
             command.extend(self.tests)
 
@@ -344,13 +331,9 @@ class Trial(buildstep.ShellMixin, buildstep.BuildStep):
         stdio_log = yield self.getLog('stdio')
         yield stdio_log.finish()
 
-        # figure out all status, then let the various hook functions return
-        # different pieces of it
-
-        problems = '\n'.join(self.problems)
         warnings = self.warnings
 
-        if problems:
+        if problems := '\n'.join(self.problems):
             yield self.addCompleteLog("problems", problems)
 
         if warnings:
@@ -368,17 +351,7 @@ class Trial(buildstep.ShellMixin, buildstep.BuildStep):
 
         desc_parts = []
 
-        if not cmd.didFail():
-            if parsed:
-                results = SUCCESS
-                if total:
-                    desc_parts += [str(total), total == 1 and "test" or "tests", "passed"]
-                else:
-                    desc_parts += ["no tests", "run"]
-            else:
-                results = FAILURE
-                desc_parts += ["testlog", "unparseable"]
-        else:
+        if cmd.didFail():
             # something failed
             results = FAILURE
             if parsed:
@@ -390,6 +363,16 @@ class Trial(buildstep.ShellMixin, buildstep.BuildStep):
             else:
                 desc_parts += ["tests", "failed"]
 
+        elif parsed:
+            results = SUCCESS
+            desc_parts += (
+                [str(total), total == 1 and "test" or "tests", "passed"]
+                if total
+                else ["no tests", "run"]
+            )
+        else:
+            results = FAILURE
+            desc_parts += ["testlog", "unparseable"]
         if counts['skips']:
             desc_parts += [str(counts['skips']), counts['skips'] == 1 and "skip" or "skips"]
         if counts['expectedFailures']:

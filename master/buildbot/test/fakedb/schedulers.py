@@ -108,27 +108,36 @@ class FakeSchedulersComponent(FakeDBComponent):
 
         if branch != -1:
             # filter out the classifications for the requested branch
-            classifications = dict(
-                (k, v) for (k, v) in classifications.items()
-                if self.db.changes.changes.get(k, sentinel)['branch'] == branch)
+            classifications = {
+                k: v
+                for (k, v) in classifications.items()
+                if self.db.changes.changes.get(k, sentinel)['branch'] == branch
+            }
 
         if repository != -1:
             # filter out the classifications for the requested branch
-            classifications = dict(
-                (k, v) for (k, v) in classifications.items()
-                if self.db.changes.changes.get(k, sentinel)['repository'] == repository)
+            classifications = {
+                k: v
+                for (k, v) in classifications.items()
+                if self.db.changes.changes.get(k, sentinel)['repository']
+                == repository
+            }
 
         if project != -1:
             # filter out the classifications for the requested branch
-            classifications = dict(
-                (k, v) for (k, v) in classifications.items()
-                if self.db.changes.changes.get(k, sentinel)['project'] == project)
+            classifications = {
+                k: v
+                for (k, v) in classifications.items()
+                if self.db.changes.changes.get(k, sentinel)['project'] == project
+            }
 
         if codebase != -1:
             # filter out the classifications for the requested branch
-            classifications = dict(
-                (k, v) for (k, v) in classifications.items()
-                if self.db.changes.changes.get(k, sentinel)['codebase'] == codebase)
+            classifications = {
+                k: v
+                for (k, v) in classifications.items()
+                if self.db.changes.changes.get(k, sentinel)['codebase'] == codebase
+            }
 
         return defer.succeed(classifications)
 

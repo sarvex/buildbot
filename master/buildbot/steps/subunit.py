@@ -112,14 +112,13 @@ class SubunitShellCommand(buildstep.ShellMixin, buildstep.BuildStep):
         stdio_log = yield self.getLog('stdio')
         yield stdio_log.finish()
 
-        problems = ""
-        for test, err in self._observer.errors + self._observer.failures:
-            problems += f"{test.id()}\n{err}"
-        if problems:
+        if problems := "".join(
+            f"{test.id()}\n{err}"
+            for test, err in self._observer.errors + self._observer.failures
+        ):
             yield self.addCompleteLog("problems", problems)
 
-        warnings = self._observer.warningio.getvalue()
-        if warnings:
+        if warnings := self._observer.warningio.getvalue():
             yield self.addCompleteLog("warnings", warnings)
 
         failures = len(self._observer.failures)
@@ -132,33 +131,29 @@ class SubunitShellCommand(buildstep.ShellMixin, buildstep.BuildStep):
         if failures + errors > 0:
             return FAILURE
 
-        if not total and self.failureOnNoTests:
-            return FAILURE
-        return SUCCESS
+        return FAILURE if not total and self.failureOnNoTests else SUCCESS
 
     def getResultSummary(self):
         failures = len(self._observer.failures)
         errors = len(self._observer.errors)
-        skips = len(self._observer.skips)
         total = self._observer.testsRun
 
         count = failures + errors
 
         summary = self.name
 
-        if not count:
-            if total:
-                summary += f' {total} {total == 1 and "test" or "tests"} passed'
-            else:
-                summary += " no tests run"
-        else:
+        if count:
             summary += f" Total {total} test(s)"
             if failures:
                 summary += f' {failures} {failures == 1 and "failure" or "failures"}'
             if errors:
                 summary += f' {errors} {errors == 1 and "error" or "errors"}'
 
-        if skips:
+        elif total:
+            summary += f' {total} {total == 1 and "test" or "tests"} passed'
+        else:
+            summary += " no tests run"
+        if skips := len(self._observer.skips):
             summary += f' {skips} {skips == 1 and "skip" or "skips"}'
 
         # TODO: expectedFailures/unexpectedSuccesses

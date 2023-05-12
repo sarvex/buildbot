@@ -111,13 +111,9 @@ class TempSourceStamp:
     def __getattr__(self, attr):
         patch = self._ssdict.get('patch')
         if attr == 'patch':
-            if patch:
-                return (patch['level'], patch['body'], patch['subdir'])
-            return None
+            return (patch['level'], patch['body'], patch['subdir']) if patch else None
         elif attr == 'patch_info':
-            if patch:
-                return (patch['author'], patch['comment'])
-            return (None, None)
+            return (patch['author'], patch['comment']) if patch else (None, None)
         elif attr in self.ATTRS or attr == 'ssid':
             return self._ssdict[attr]
         raise AttributeError(attr)
@@ -126,12 +122,7 @@ class TempSourceStamp:
         return self._ssdict
 
     def asDict(self):
-        # This return value should match the kwargs to
-        # SourceStampsConnectorComponent.findSourceStampId
-        result = {}
-        for attr in self.ATTRS:
-            result[attr] = self._ssdict.get(attr)
-
+        result = {attr: self._ssdict.get(attr) for attr in self.ATTRS}
         patch = self._ssdict.get('patch') or {}
         for patch_attr, attr in self.PATCH_ATTRS:
             result[patch_attr] = patch.get(attr)
@@ -281,10 +272,8 @@ class BuildRequest:
         otherBuildsets = yield master.data.get(('buildsets', str(old_br['buildsetid'])))
 
         # extract sourcestamps, as dictionaries by codebase
-        selfSources = dict((ss['codebase'], ss)
-                           for ss in selfBuildsets['sourcestamps'])
-        otherSources = dict((ss['codebase'], ss)
-                            for ss in otherBuildsets['sourcestamps'])
+        selfSources = {ss['codebase']: ss for ss in selfBuildsets['sourcestamps']}
+        otherSources = {ss['codebase']: ss for ss in otherBuildsets['sourcestamps']}
 
         # if the sets of codebases do not match, we can't collapse
         if set(selfSources) != set(otherSources):
@@ -307,14 +296,13 @@ class BuildRequest:
             # get changes & compare
             selfChanges = yield master.data.get(('sourcestamps', selfSS['ssid'], 'changes'))
             otherChanges = yield master.data.get(('sourcestamps', otherSS['ssid'], 'changes'))
-            # if both have changes, proceed, else fail - if no changes check revision instead
-            if selfChanges and otherChanges:
-                continue
+            if selfChanges:
+                if otherChanges:
+                    continue
 
-            if selfChanges and not otherChanges:
                 return False
 
-            if not selfChanges and otherChanges:
+            if otherChanges:
                 return False
 
             # else check revisions
@@ -327,10 +315,7 @@ class BuildRequest:
 
         new_bs_props = BuildRequest.filter_buildset_props_for_collapsing(new_bs_props)
         old_bs_props = BuildRequest.filter_buildset_props_for_collapsing(old_bs_props)
-        if new_bs_props != old_bs_props:
-            return False
-
-        return True
+        return new_bs_props == old_bs_props
 
     def mergeSourceStampsWith(self, others):
         """ Returns one merged sourcestamp for every codebase """
@@ -345,9 +330,11 @@ class BuildRequest:
             all_sources = []
             if codebase in self.sources:
                 all_sources.append(self.sources[codebase])
-            for other in others:
-                if codebase in other.sources:
-                    all_sources.append(other.sources[codebase])
+            all_sources.extend(
+                other.sources[codebase]
+                for other in others
+                if codebase in other.sources
+            )
             assert all_sources, "each codebase should have at least one sourcestamp"
 
             # TODO: select the sourcestamp that best represents the merge,

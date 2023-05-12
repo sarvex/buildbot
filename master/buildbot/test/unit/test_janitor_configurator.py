@@ -59,7 +59,7 @@ class JanitorConfiguratorTests(configurators.ConfiguratorMixin, unittest.Synchro
         self.setupConfigurator(**configuration)
         self.expectWorker(JANITOR_NAME, LocalWorker)
         self.expectScheduler(JANITOR_NAME, Nightly)
-        self.expectScheduler(JANITOR_NAME + "_force", ForceScheduler)
+        self.expectScheduler(f"{JANITOR_NAME}_force", ForceScheduler)
         self.expectBuilderHasSteps(JANITOR_NAME, exp_steps)
         self.expectNoConfigError()
 

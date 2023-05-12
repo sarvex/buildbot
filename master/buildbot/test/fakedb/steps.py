@@ -72,9 +72,7 @@ class FakeStepsComponent(FakeDBComponent):
     def getStep(self, stepid=None, buildid=None, number=None, name=None):
         if stepid is not None:
             row = self.steps.get(stepid)
-            if not row:
-                return defer.succeed(None)
-            return defer.succeed(self._row2dict(row))
+            return defer.succeed(None) if not row else defer.succeed(self._row2dict(row))
         else:
             if number is None and name is None:
                 return defer.fail(RuntimeError("specify both name and number"))
@@ -89,13 +87,11 @@ class FakeStepsComponent(FakeDBComponent):
             return defer.succeed(None)
 
     def getSteps(self, buildid):
-        ret = []
-
-        for row in self.steps.values():
-            if row['buildid'] != buildid:
-                continue
-            ret.append(self._row2dict(row))
-
+        ret = [
+            self._row2dict(row)
+            for row in self.steps.values()
+            if row['buildid'] == buildid
+        ]
         ret.sort(key=lambda r: r['number'])
         return defer.succeed(ret)
 
@@ -104,10 +100,9 @@ class FakeStepsComponent(FakeDBComponent):
                               validation.StringValidator())
         validation.verifyType(self.t, 'name', name,
                               validation.IdentifierValidator(50))
-        # get a unique name and number
-        build_steps = [r for r in self.steps.values()
-                       if r['buildid'] == buildid]
-        if build_steps:
+        if build_steps := [
+            r for r in self.steps.values() if r['buildid'] == buildid
+        ]:
             number = max(r['number'] for r in build_steps) + 1
             names = {r['name'] for r in build_steps}
             if name in names:
@@ -134,16 +129,14 @@ class FakeStepsComponent(FakeDBComponent):
         return defer.succeed((id, number, name))
 
     def startStep(self, stepid):
-        b = self.steps.get(stepid)
-        if b:
+        if b := self.steps.get(stepid):
             b['started_at'] = self.reactor.seconds()
         return defer.succeed(None)
 
     def setStepStateString(self, stepid, state_string):
         validation.verifyType(self.t, 'state_string', state_string,
                               validation.StringValidator())
-        b = self.steps.get(stepid)
-        if b:
+        if b := self.steps.get(stepid):
             b['state_string'] = state_string
         return defer.succeed(None)
 
@@ -154,8 +147,7 @@ class FakeStepsComponent(FakeDBComponent):
                               validation.IdentifierValidator(50))
         validation.verifyType(self.t, 'url', url,
                               validation.StringValidator())
-        b = self.steps.get(stepid)
-        if b:
+        if b := self.steps.get(stepid):
             urls = json.loads(b['urls_json'])
             url_item = dict(name=name, url=url)
             if url_item not in urls:
@@ -165,8 +157,7 @@ class FakeStepsComponent(FakeDBComponent):
 
     def finishStep(self, stepid, results, hidden):
         now = self.reactor.seconds()
-        b = self.steps.get(stepid)
-        if b:
+        if b := self.steps.get(stepid):
             b['complete_at'] = now
             b['results'] = results
             b['hidden'] = bool(hidden)

@@ -247,8 +247,13 @@ class TestSetupPyEntryPoints(unittest.TestCase):
                 for name, obj in inspect.getmembers(module):
                     if name.startswith('_'):
                         continue
-                    if inspect.isclass(obj) and obj.__module__ == existing_module:
-                        if interface is not None and not self.class_provides_iface(interface, obj):
-                            continue
+                    if (
+                        inspect.isclass(obj)
+                        and obj.__module__ == existing_module
+                        and (
+                            interface is None
+                            or self.class_provides_iface(interface, obj)
+                        )
+                    ):
                         existing_classes.add(f'{existing_module}.{name}')
         return existing_classes

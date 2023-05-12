@@ -103,12 +103,12 @@ class DebPbuilder(WarningCountingShellCommand):
     def run(self):
         if self.basetgz is None:
             self.basetgz = self._default_basetgz
-            kwargs = {}
-            if self.architecture:
-                kwargs['architecture'] = self.architecture
-            else:
-                kwargs['architecture'] = 'local'
-            kwargs['distribution'] = self.distribution
+            kwargs = {
+                'architecture': self.architecture
+                if self.architecture
+                else 'local',
+                'distribution': self.distribution,
+            }
             self.basetgz = self.basetgz.format(**kwargs)
 
         self.command = ['pdebuild', '--buildresult', '.', '--pbuilder', self.pbuilder]
@@ -189,9 +189,8 @@ class DebPbuilder(WarningCountingShellCommand):
         r = re.compile(r"dpkg-genchanges  >\.\./(.+\.changes)")
         while True:
             _, line = yield
-            mo = r.search(line)
-            if mo:
-                self.setProperty("deb-changes", mo.group(1), "DebPbuilder")
+            if mo := r.search(line):
+                self.setProperty("deb-changes", mo[1], "DebPbuilder")
 
 
 class DebCowbuilder(DebPbuilder):

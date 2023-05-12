@@ -117,8 +117,8 @@ class RawLogChunkEndpoint(LogChunkEndpointBase):
 
         if not dbdict:
             dbdict = yield self.master.db.logs.getLog(logid)
-            if not dbdict:
-                return None
+        if not dbdict:
+            return None
         lastline = max(0, dbdict['num_lines'] - 1)
 
         logLines = yield self.master.db.logs.getLogLines(

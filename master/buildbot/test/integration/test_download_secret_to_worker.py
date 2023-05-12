@@ -36,11 +36,7 @@ class DownloadSecretsBase(RunMasterBase):
 
     @defer.inlineCallbacks
     def setup_config(self, path, data, remove=False):
-        c = {}
-
-        c['schedulers'] = [
-            ForceScheduler(name="force", builderNames=["testy"])
-        ]
+        c = {'schedulers': [ForceScheduler(name="force", builderNames=["testy"])]}
 
         f = BuildFactory()
         f.addStep(DownloadSecretsToWorker([(path, data)]))
@@ -55,9 +51,7 @@ class DownloadSecretsBase(RunMasterBase):
 
     def get_homedir(self):
         path = os.path.expanduser('~')
-        if path == '~':
-            return None
-        return path
+        return None if path == '~' else path
 
     @parameterized.expand([
         ('simple', False, True),

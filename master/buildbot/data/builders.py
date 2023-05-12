@@ -38,9 +38,8 @@ class BuilderEndpoint(base.BuildNestingMixin, base.Endpoint):
         bdict = yield self.master.db.builders.getBuilder(builderid)
         if not bdict:
             return None
-        if 'masterid' in kwargs:
-            if kwargs['masterid'] not in bdict['masterids']:
-                return None
+        if 'masterid' in kwargs and kwargs['masterid'] not in bdict['masterids']:
+            return None
         return dict(builderid=builderid,
                     name=bdict['name'],
                     masterids=bdict['masterids'],
@@ -69,9 +68,7 @@ class BuildersEndpoint(base.Endpoint):
                for bd in bdicts]
 
     def get_kwargs_from_graphql(self, parent, resolve_info, args):
-        if parent is not None:
-            return {'masterid': parent['masterid']}
-        return {}
+        return {'masterid': parent['masterid']} if parent is not None else {}
 
 
 class Builder(base.ResourceType):

@@ -136,14 +136,9 @@ class RemoteCommand(base.RemoteCommandImpl):
 
     def _start(self):
         self._startTime = util.now()
-        # This method only initiates the remote command.
-        # We will receive remote_update messages as the command runs.
-        # We will get a single remote_complete when it finishes.
-        # We should fire self.deferred when the command is done.
-        d = self.conn.remoteStartCommand(self, self.builder_name,
-                                         self.commandID, self.remote_command,
-                                         self.args)
-        return d
+        return self.conn.remoteStartCommand(
+            self, self.builder_name, self.commandID, self.remote_command, self.args
+        )
 
     @defer.inlineCallbacks
     def _finished(self, failure=None):
@@ -380,13 +375,12 @@ class RemoteCommand(base.RemoteCommandImpl):
             metrics.MetricTimeEvent.log("RemoteCommand.overhead", delta)
 
         for key, lbf in self._line_boundary_finders.items():
+            whole_line = lbf.flush()
             if key in ['stdout', 'stderr', 'header']:
-                whole_line = lbf.flush()
                 if whole_line is not None:
                     yield self.remoteUpdate(key, whole_line, True)
             else:
                 logname = key
-                whole_line = lbf.flush()
                 value = (logname, whole_line)
                 if whole_line is not None:
                     yield self.remoteUpdate("log", value, True)
@@ -420,9 +414,7 @@ class RemoteCommand(base.RemoteCommandImpl):
     def results(self):
         if self.interrupted:
             return CANCELLED
-        if self.rc in self.decodeRC:
-            return self.decodeRC[self.rc]
-        return FAILURE
+        return self.decodeRC[self.rc] if self.rc in self.decodeRC else FAILURE
 
     def didFail(self):
         return self.results() == FAILURE

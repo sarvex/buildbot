@@ -29,16 +29,15 @@ class ShellMaster(RunMasterBase):
 
     @defer.inlineCallbacks
     def setup_config(self, usePTY):
-        c = {}
         from buildbot.config import BuilderConfig
         from buildbot.process.factory import BuildFactory
         from buildbot.plugins import steps, schedulers
 
-        c['schedulers'] = [
-            schedulers.ForceScheduler(
-                name="force",
-                builderNames=["testy"])]
-
+        c = {
+            'schedulers': [
+                schedulers.ForceScheduler(name="force", builderNames=["testy"])
+            ]
+        }
         f = BuildFactory()
         f.addStep(steps.ShellCommand(
             command='if [ -t 1 ] ; then echo in a terminal; else echo "not a terminal"; fi',

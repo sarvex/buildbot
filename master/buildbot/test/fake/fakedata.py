@@ -446,11 +446,11 @@ class FakeUpdates(service.AsyncService):
         validation.verifyType(self.testcase, 'category', category, validation.StringValidator())
         validation.verifyType(self.testcase, 'value_unit', value_unit, validation.StringValidator())
 
-        test_result_setid = \
-            yield self.master.db.test_result_sets.addTestResultSet(builderid, buildid, stepid,
-                                                                   description, category,
-                                                                   value_unit)
-        return test_result_setid
+        return (
+            yield self.master.db.test_result_sets.addTestResultSet(
+                builderid, buildid, stepid, description, category, value_unit
+            )
+        )
 
     @defer.inlineCallbacks
     def completeTestResultSet(self, test_result_setid, tests_passed=None, tests_failed=None):

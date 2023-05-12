@@ -63,11 +63,7 @@ class AbstractWorkerForBuilder:
             return False
 
         # otherwise, check in with the Worker
-        if self.worker:
-            return self.worker.canStartBuild()
-
-        # no worker? not very available.
-        return False
+        return self.worker.canStartBuild() if self.worker else False
 
     def isBusy(self):
         return self.state != States.AVAILABLE
@@ -204,8 +200,7 @@ class LatentWorkerForBuilder(AbstractWorkerForBuilder):
 
     def substantiate_if_needed(self, build):
         self.state = States.DETACHED
-        d = self.substantiate(build)
-        return d
+        return self.substantiate(build)
 
     def insubstantiate_if_needed(self):
         self.worker.insubstantiate()

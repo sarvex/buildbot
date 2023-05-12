@@ -57,19 +57,20 @@ class MarathonMaster(RunMasterBase):
     def setup_config(self, num_concurrent, extra_steps=None):
         if extra_steps is None:
             extra_steps = []
-        c = {}
+        c = {
+            'schedulers': [
+                schedulers.ForceScheduler(name="force", builderNames=["testy"])
+            ]
+        }
 
-        c['schedulers'] = [
-            schedulers.ForceScheduler(
-                name="force",
-                builderNames=["testy"])]
         triggereables = []
         for i in range(num_concurrent):
             c['schedulers'].append(
                 schedulers.Triggerable(
-                    name="trigsched" + str(i),
-                    builderNames=["build"]))
-            triggereables.append("trigsched" + str(i))
+                    name=f"trigsched{str(i)}", builderNames=["build"]
+                )
+            )
+            triggereables.append(f"trigsched{str(i)}")
 
         f = BuildFactory()
         f.addStep(steps.ShellCommand(command='echo hello'))
@@ -82,13 +83,13 @@ class MarathonMaster(RunMasterBase):
         for step in extra_steps:
             f2.addStep(step)
         c['builders'] = [
-            BuilderConfig(name="testy",
-                          workernames=["marathon0"],
-                          factory=f),
-            BuilderConfig(name="build",
-                          workernames=["marathon" + str(i)
-                                       for i in range(num_concurrent)],
-                          factory=f2)]
+            BuilderConfig(name="testy", workernames=["marathon0"], factory=f),
+            BuilderConfig(
+                name="build",
+                workernames=[f"marathon{str(i)}" for i in range(num_concurrent)],
+                factory=f2,
+            ),
+        ]
         url = os.environ.get('BBTEST_MARATHON_URL')
         creds = os.environ.get('BBTEST_MARATHON_CREDS')
         if creds is not None:
@@ -99,10 +100,15 @@ class MarathonMaster(RunMasterBase):
         marathon_extra_config = {
         }
         c['workers'] = [
-            MarathonLatentWorker('marathon' + str(i), url, user, password,
-                                 'buildbot/buildbot-worker:master',
-                                 marathon_extra_config=marathon_extra_config,
-                                 masterFQDN=masterFQDN)
+            MarathonLatentWorker(
+                f'marathon{str(i)}',
+                url,
+                user,
+                password,
+                'buildbot/buildbot-worker:master',
+                marathon_extra_config=marathon_extra_config,
+                masterFQDN=masterFQDN,
+            )
             for i in range(num_concurrent)
         ]
         # un comment for debugging what happens if things looks locked.

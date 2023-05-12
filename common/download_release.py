@@ -8,9 +8,9 @@ import yaml
 
 def download(session, url, fn):
     if os.path.exists(fn):
-        print('Removing old file {}'.format(fn))
+        print(f'Removing old file {fn}')
         os.unlink(fn)
-    print('Downloading {} from {}'.format(fn, url))
+    print(f'Downloading {fn} from {url}')
     with open(fn, 'wb') as f:
         r = session.get(url, stream=True)
         r.raise_for_status()
@@ -24,7 +24,7 @@ def main():
         token = conf['github.com'][0]['oauth_token']
 
     s = requests.Session()
-    s.headers.update({'Authorization': 'token ' + token})
+    s.headers.update({'Authorization': f'token {token}'})
     r = s.get("https://api.github.com/repos/buildbot/buildbot/releases/latest")
     r.raise_for_status()
     r = r.json()
@@ -47,11 +47,11 @@ def main():
     url = "https://github.com/buildbot/buildbot/archive/{tag}.tar.gz".format(tag=tag)
     fn = os.path.join('dist', "buildbot-{tag}.gitarchive.tar.gz".format(tag=tag))
     download(s, url, fn)
-    sigfn = fn + ".asc"
+    sigfn = f"{fn}.asc"
     if os.path.exists(sigfn):
         os.unlink(sigfn)
     # sign the tag archive for debian
-    os.system("gpg --armor --detach-sign --output {} {}".format(sigfn, fn))
+    os.system(f"gpg --armor --detach-sign --output {sigfn} {fn}")
     sigfnbase = os.path.basename(sigfn)
     r = s.post(upload_url,
                headers={'Content-Type': "application/pgp-signature"},

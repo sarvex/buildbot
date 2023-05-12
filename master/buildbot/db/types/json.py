@@ -34,8 +34,5 @@ class JsonObject(TypeDecorator):
         return value
 
     def process_result_value(self, value, dialect):
-        if value is not None:
-            value = json.loads(value)
-        else:
-            value = {}
+        value = json.loads(value) if value is not None else {}
         return value

@@ -205,12 +205,11 @@ class TestGitHubPullrequestPoller(changesource.ChangeSourceMixin,
                         endpoint='https://api.github.com',
                         **kwargs):
         http_headers = {'User-Agent': 'Buildbot'}
-        token = kwargs.get('token', None)
-        if token:
+        if token := kwargs.get('token', None):
             p = Properties()
             p.master = self.master
             token = yield p.render(token)
-            http_headers.update({'Authorization': 'token ' + token})
+            http_headers['Authorization'] = f'token {token}'
         self._http = yield fakehttpclientservice.HTTPClientService.getService(
             self.master, self, endpoint, headers=http_headers)
         self.changesource = GitHubPullrequestPoller(owner, repo, **kwargs)
@@ -232,14 +231,17 @@ class TestGitHubPullrequestPoller(changesource.ChangeSourceMixin,
         yield self.newChangeSource('defunkt', 'defunkt')
         yield self.startChangeSource()
         self.assertEqual(
-            f"GitHubPullrequestPoller watching the GitHub repository {'defunkt'}/{'defunkt'}",
-            self.changesource.describe())
+            'GitHubPullrequestPoller watching the GitHub repository defunkt/defunkt',
+            self.changesource.describe(),
+        )
 
     @defer.inlineCallbacks
     def test_default_name(self):
         yield self.newChangeSource('defunkt', 'defunkt')
         yield self.startChangeSource()
-        self.assertEqual(f"GitHubPullrequestPoller:{'defunkt'}/{'defunkt'}", self.changesource.name)
+        self.assertEqual(
+            'GitHubPullrequestPoller:defunkt/defunkt', self.changesource.name
+        )
 
     @defer.inlineCallbacks
     def test_custom_name(self):

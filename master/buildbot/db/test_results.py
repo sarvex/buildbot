@@ -236,9 +236,8 @@ class TestResultsConnectorComponent(base.DBConnectorComponent):
 
             res = conn.execute(q)
             row = res.fetchone()
-            if not row:
-                return None
-            return self._thd_row2dict(conn, row)
+            return None if not row else self._thd_row2dict(conn, row)
+
         res = yield self.db.pool.do(thd)
         return res
 

@@ -176,7 +176,7 @@ class GerritChangeSourceBase(base.ChangeSource, PullRequestMixin):
         return properties
 
     def eventReceived(self, event):
-        if not event['type'] in self.handled_events:
+        if event['type'] not in self.handled_events:
             if self.debug:
                 log.msg(f"the event type '{event['type']}' is not setup to handle")
             return defer.succeed(None)
@@ -377,7 +377,7 @@ class GerritChangeSource(GerritChangeSourceBase):
 
         now = util.now()
         if now - self.lastStreamProcessStart < \
-           self.STREAM_GOOD_CONNECTION_TIME:
+               self.STREAM_GOOD_CONNECTION_TIME:
             # bad startup; start the stream process again after a timeout,
             # and then increase the timeout
             log.msg(f"{self.name}: stream-events failed; restarting after "
@@ -385,8 +385,9 @@ class GerritChangeSource(GerritChangeSourceBase):
             self.master.reactor.callLater(
                 self.streamProcessTimeout, self.startStreamProcess)
             self.streamProcessTimeout *= self.STREAM_BACKOFF_EXPONENT
-            if self.streamProcessTimeout > self.STREAM_BACKOFF_MAX:
-                self.streamProcessTimeout = self.STREAM_BACKOFF_MAX
+            self.streamProcessTimeout = min(
+                self.streamProcessTimeout, self.STREAM_BACKOFF_MAX
+            )
         else:
             # good startup, but lost connection; restart immediately,
             # and set the timeout to its minimum
@@ -457,9 +458,7 @@ class GerritChangeSource(GerritChangeSourceBase):
         # may be logged, although things will settle down normally
 
     def describe(self):
-        status = ""
-        if not self.process:
-            status = "[NOT CONNECTED - check log]"
+        status = "[NOT CONNECTED - check log]" if not self.process else ""
         return ("GerritChangeSource watching the remote "
                 f"Gerrit repository {self.username}@{self.gerritserver} {status}")
 

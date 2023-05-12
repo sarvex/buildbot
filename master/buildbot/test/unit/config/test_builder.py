@@ -30,9 +30,7 @@ class BuilderConfigTests(ConfigErrorsMixin, unittest.TestCase):
     # utils
 
     def assertAttributes(self, cfg, **expected):
-        got = {
-            attr: getattr(cfg, attr)
-            for attr, exp in expected.items()}
+        got = {attr: getattr(cfg, attr) for attr in expected}
         self.assertEqual(got, expected)
 
     # tests

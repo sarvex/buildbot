@@ -152,10 +152,7 @@ class LatentController(SeverWorkerConnectionMixin):
         yield worker.disownServiceParent()
 
     def setup_kind(self, build):
-        if build:
-            self._started_kind_deferred = build.render(self.kind)
-        else:
-            self._started_kind_deferred = self.kind
+        self._started_kind_deferred = build.render(self.kind) if build else self.kind
 
     @defer.inlineCallbacks
     def get_started_kind(self):

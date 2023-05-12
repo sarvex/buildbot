@@ -78,7 +78,7 @@ def get_distro():
         dist = platform.mac_ver()
         return f"{dist[0]}"
     # else:
-    return ":".join(platform.uname()[0:1])
+    return ":".join(platform.uname()[:1])
 
 
 def getName(obj):
@@ -88,10 +88,8 @@ def getName(obj):
     # elastic search does not like '.' in dict keys, so we replace by /
     def sanitize(name):
         return name.replace(".", "/")
-    if isinstance(obj, _BuildStepFactory):
-        klass = obj.factory
-    else:
-        klass = type(obj)
+
+    klass = obj.factory if isinstance(obj, _BuildStepFactory) else type(obj)
     name = ""
     klasses = (klass, ) + inspect.getmro(klass)
     for klass in klasses:
@@ -164,9 +162,7 @@ def fullData(master):
 
     builders = []
     for b in master.config.builders:
-        steps = []
-        for step in b.factory.steps:
-            steps.append(getName(step))
+        steps = [getName(step) for step in b.factory.steps]
         builders.append(steps)
     return {'builders': builders}
 

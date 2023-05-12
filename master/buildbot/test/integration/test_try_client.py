@@ -94,7 +94,6 @@ class Schedulers(RunMasterBase, www.RequiresWwwMixin):
 
     @defer.inlineCallbacks
     def setup_config(self, extra_config):
-        c = {}
         from buildbot.config import BuilderConfig
         from buildbot.process.buildstep import BuildStep
         from buildbot.process.factory import BuildFactory
@@ -105,21 +104,23 @@ class Schedulers(RunMasterBase, www.RequiresWwwMixin):
             def run(self):
                 return results.SUCCESS
 
-        c['change_source'] = []
-        c['schedulers'] = []  # filled in above
         f1 = BuildFactory()
         f1.addStep(MyBuildStep(name='one'))
         f1.addStep(MyBuildStep(name='two'))
-        c['builders'] = [
-            BuilderConfig(name="a", workernames=["local1"], factory=f1),
-        ]
-        c['title'] = "test"
-        c['titleURL'] = "test"
-        c['buildbotURL'] = "http://localhost:8010/"
-        c['mq'] = {'debug': True}
+        c = {
+            'change_source': [],
+            'schedulers': [],
+            'builders': [
+                BuilderConfig(name="a", workernames=["local1"], factory=f1)
+            ],
+            'title': "test",
+            'titleURL': "test",
+            'buildbotURL': "http://localhost:8010/",
+            'mq': {'debug': True},
+        }
         # test wants to influence the config, but we still return a new config
         # each time
-        c.update(extra_config)
+        c |= extra_config
         yield self.setup_master(c)
 
     @defer.inlineCallbacks

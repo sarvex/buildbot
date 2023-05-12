@@ -92,9 +92,7 @@ class Change:
         self.comments = comments
 
         def none_or_unicode(x):
-            if x is None:
-                return x
-            return str(x)
+            return x if x is None else str(x)
 
         self.revision = none_or_unicode(revision)
         now = util.now()
@@ -155,8 +153,7 @@ class Change:
         return self.number >= other.number
 
     def asText(self):
-        data = ""
-        data += "Files:\n"
+        data = "" + "Files:\n"
         for f in self.files:
             data += f" {f}\n"
         if self.repository:
@@ -178,7 +175,7 @@ class Change:
         files = [dict(name=f) for f in self.files]
         files.sort(key=lambda a: a['name'])
 
-        result = {
+        return {
             # Constant
             'number': self.number,
             'branch': self.branch,
@@ -195,9 +192,8 @@ class Change:
             'properties': self.properties.asList(),
             'repository': getattr(self, 'repository', None),
             'codebase': getattr(self, 'codebase', ''),
-            'project': getattr(self, 'project', None)
+            'project': getattr(self, 'project', None),
         }
-        return result
 
     def getShortAuthor(self):
         return self.who

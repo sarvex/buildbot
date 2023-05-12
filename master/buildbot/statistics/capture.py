@@ -184,9 +184,7 @@ class CaptureBuildTimes(Capture):
             yield defer.succeed(None)
 
     def _err_msg(self, build_data, builder_name):
-        msg = (f"{self.__class__.__name__} failed on build {build_data['number']} "
-               f"on builder {builder_name}.")
-        return msg
+        return f"{self.__class__.__name__} failed on build {build_data['number']} on builder {builder_name}."
 
     @abc.abstractmethod
     def _retValParams(self, msg):

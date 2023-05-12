@@ -12,6 +12,4 @@ class FakeSecretStorage(SecretProviderBase):
         self.allsecrets = secretdict
 
     def get(self, key):
-        if key in self.allsecrets:
-            return self.allsecrets[key]
-        return None
+        return self.allsecrets[key] if key in self.allsecrets else None

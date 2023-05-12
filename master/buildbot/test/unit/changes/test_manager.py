@@ -43,8 +43,7 @@ class TestChangeManager(unittest.TestCase, TestReactorMixin):
 
     def make_sources(self, n, klass=base.ChangeSource, **kwargs):
         for i in range(n):
-            src = klass(name=f'ChangeSource {i}', **kwargs)
-            yield src
+            yield klass(name=f'ChangeSource {i}', **kwargs)
 
     @defer.inlineCallbacks
     def test_reconfigService_add(self):

@@ -72,11 +72,12 @@ class GitHubStatusPush(ReporterBase):
             baseURL = baseURL[:-1]
 
         self._http = yield httpclientservice.HTTPClientService.getService(
-            self.master, baseURL, headers={
-                'Authorization': 'token ' + token,
-                'User-Agent': 'Buildbot'
-            },
-            debug=self.debug, verify=self.verify)
+            self.master,
+            baseURL,
+            headers={'Authorization': f'token {token}', 'User-Agent': 'Buildbot'},
+            debug=self.debug,
+            verify=self.verify,
+        )
 
     def setup_context(self, context):
         return context or Interpolate('buildbot/%(prop:buildername)s')
@@ -129,11 +130,9 @@ class GitHubStatusPush(ReporterBase):
         return code // 100 == 2
 
     def _extract_issue(self, props):
-        branch = props.getProperty('branch')
-        if branch:
-            m = re.search(r"refs/pull/([0-9]*)/(head|merge)", branch)
-            if m:
-                return m.group(1)
+        if branch := props.getProperty('branch'):
+            if m := re.search(r"refs/pull/([0-9]*)/(head|merge)", branch):
+                return m[1]
         return None
 
     def _extract_github_info(self, sourcestamp):
@@ -144,8 +143,7 @@ class GitHubStatusPush(ReporterBase):
         if project and "/" in project:
             repo_owner, repo_name = project.split('/')
         elif repository:
-            giturl = giturlparse(repository)
-            if giturl:
+            if giturl := giturlparse(repository):
                 repo_owner = giturl.owner
                 repo_name = giturl.repo
 
@@ -285,5 +283,4 @@ class GitHubCommentPush(GitHubStatusPush):
             return None
 
         url = '/'.join(['/repos', repo_user, repo_name, 'issues', issue, 'comments'])
-        ret = yield self._http.post(url, json=payload)
-        return ret
+        return (yield self._http.post(url, json=payload))

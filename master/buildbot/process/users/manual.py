@@ -120,18 +120,13 @@ class CommandlineUserManagerPerspective(pbutil.NewCredPerspective):
                     identifier=user)
 
                 result = None
-                if op == 'remove':
-                    if uid:
-                        yield self.master.db.users.removeUser(uid)
-                        result = user
-                    else:
-                        log.msg(f"Unable to find uid for identifier {user}")
+                if op == 'remove' and uid:
+                    yield self.master.db.users.removeUser(uid)
+                    result = user
+                elif op == 'remove' or op == 'get' and not uid:
+                    log.msg(f"Unable to find uid for identifier {user}")
                 elif op == 'get':
-                    if uid:
-                        result = yield self.master.db.users.getUser(uid)
-                    else:
-                        log.msg(f"Unable to find uid for identifier {user}")
-
+                    result = yield self.master.db.users.getUser(uid)
                 results.append(result)
         else:
             for user in info:
@@ -143,17 +138,7 @@ class CommandlineUserManagerPerspective(pbutil.NewCredPerspective):
 
                 # if only an identifier was in user, we're updating only
                 # the bb_username and bb_password.
-                if not user:
-                    if uid:
-                        result = yield self.master.db.users.updateUser(
-                            uid=uid,
-                            identifier=ident,
-                            bb_username=bb_username,
-                            bb_password=bb_password)
-                        results.append(ident)
-                    else:
-                        log.msg(f"Unable to find uid for identifier {user}")
-                else:
+                if user:
                     # when adding, we update the user after the first attr
                     once_through = False
                     for attr in user:
@@ -181,6 +166,15 @@ class CommandlineUserManagerPerspective(pbutil.NewCredPerspective):
                         if result:
                             results.append(result)
                             uid = result
+                elif uid:
+                    result = yield self.master.db.users.updateUser(
+                        uid=uid,
+                        identifier=ident,
+                        bb_username=bb_username,
+                        bb_password=bb_password)
+                    results.append(ident)
+                else:
+                    log.msg(f"Unable to find uid for identifier {user}")
         results = self.formatResults(op, results)
         return results
 
@@ -218,7 +212,6 @@ class CommandlineUserManager(service.AsyncMultiService):
 
         @d.addCallback
         def unreg(_):
-            if self.registration:
-                return self.registration.unregister()
-            return None
+            return self.registration.unregister() if self.registration else None
+
         return d

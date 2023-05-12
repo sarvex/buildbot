@@ -10,7 +10,7 @@ import subprocess
 
 def checkout_buildbot_at_revision(curr_buildbot_root, test_buildbot_root, revision):
     if os.path.isdir(test_buildbot_root):
-        print('Removing {}'.format(test_buildbot_root))
+        print(f'Removing {test_buildbot_root}')
         shutil.rmtree(test_buildbot_root)
     os.makedirs(test_buildbot_root)
 
@@ -83,7 +83,7 @@ def main():
         test_buildbot_root = args.tmp_path
     else:
         test_buildbot_root = os.path.join(curr_buildbot_root, 'tmp-buildbot-smokedist')
-        print('Using {} as temporary path for buildbot checkout'.format(test_buildbot_root))
+        print(f'Using {test_buildbot_root} as temporary path for buildbot checkout')
 
     checkout_buildbot_at_revision(curr_buildbot_root, test_buildbot_root, args.revision)
     install_local_dependencies(curr_buildbot_root, test_buildbot_root)

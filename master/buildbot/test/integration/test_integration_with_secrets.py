@@ -24,16 +24,15 @@ class SecretsConfig(RunMasterBase):
 
     @defer.inlineCallbacks
     def setup_config(self, use_with=False):
-        c = {}
         from buildbot.config import BuilderConfig
         from buildbot.process.factory import BuildFactory
         from buildbot.plugins import schedulers, steps
 
-        c['schedulers'] = [
-            schedulers.ForceScheduler(
-                name="force",
-                builderNames=["testy"])]
-
+        c = {
+            'schedulers': [
+                schedulers.ForceScheduler(name="force", builderNames=["testy"])
+            ]
+        }
         c['secretsProviders'] = [FakeSecretStorage(
             secretdict={"foo": "bar", "something": "more"})]
         f = BuildFactory()

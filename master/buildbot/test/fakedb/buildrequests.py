@@ -69,10 +69,8 @@ class FakeBuildRequestsComponent(FakeDBComponent):
     # component methods
     @defer.inlineCallbacks
     def getBuildRequest(self, brid):
-        row = self.reqs.get(brid)
-        if row:
-            claim_row = self.claims.get(brid, None)
-            if claim_row:
+        if row := self.reqs.get(brid):
+            if claim_row := self.claims.get(brid, None):
                 row.claimed_at = claim_row.claimed_at
                 row.claimed = True
                 row.masterid = claim_row.masterid
@@ -107,18 +105,17 @@ class FakeBuildRequestsComponent(FakeDBComponent):
                 br.claimed_at = None
             if claimed is not None:
                 if isinstance(claimed, bool):
-                    if claimed:
-                        if not claim_row:
-                            continue
-                    else:
-                        if br.complete or claim_row:
-                            continue
-                else:
-                    if not claim_row or claim_row.masterid != claimed:
+                    if (
+                        claimed
+                        and not claim_row
+                        or not claimed
+                        and (br.complete or claim_row)
+                    ):
                         continue
-            if bsid is not None:
-                if br.buildsetid != bsid:
+                elif not claim_row or claim_row.masterid != claimed:
                     continue
+            if bsid is not None and br.buildsetid != bsid:
+                continue
 
             if branch or repository:
                 buildset = yield self.db.buildsets.getBuildset(br.buildsetid)
@@ -126,10 +123,12 @@ class FakeBuildRequestsComponent(FakeDBComponent):
                 for ssid in buildset['sourcestamps']:
                     sourcestamps.append((yield self.db.sourcestamps.getSourceStamp(ssid)))
 
-                if branch and not any(branch == s['branch'] for s in sourcestamps):
-                    continue
-                if repository and not any(repository == s['repository'] for s in sourcestamps):
-                    continue
+            if branch and all(branch != s['branch'] for s in sourcestamps):
+                continue
+            if repository and all(
+                repository != s['repository'] for s in sourcestamps
+            ):
+                continue
             builder = yield self.db.builders.getBuilder(br.builderid)
             br.buildername = builder["name"]
             rv.append(self._brdictFromRow(br))

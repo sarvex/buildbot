@@ -81,9 +81,8 @@ class BuildDataConnectorComponent(base.DBConnectorComponent):
                                                 (build_data_table.c.name == name))
             res = conn.execute(q)
             row = res.fetchone()
-            if not row:
-                return None
-            return self._row2dict(conn, row)
+            return None if not row else self._row2dict(conn, row)
+
         res = yield self.db.pool.do(thd)
         return res
 
@@ -100,9 +99,8 @@ class BuildDataConnectorComponent(base.DBConnectorComponent):
                         (build_data_table.c.name == name))
             res = conn.execute(q)
             row = res.fetchone()
-            if not row:
-                return None
-            return self._row2dict_novalue(conn, row)
+            return None if not row else self._row2dict_novalue(conn, row)
+
         res = yield self.db.pool.do(thd)
         return res
 

@@ -42,10 +42,7 @@ class MQBase(service.AsyncService):
             filter)
         check = yield check_callback()
         # we only wait if the check callback return true
-        if not check:
-            res = yield d
-        else:
-            res = None
+        res = (yield d) if not check else None
         yield buildCompleteConsumer.stopConsuming()
         return res
 

@@ -96,9 +96,7 @@ class FakeUsersComponent(FakeDBComponent):
         return defer.succeed(uid)
 
     def getUser(self, uid):
-        usdict = None
-        if uid in self.users:
-            usdict = self._user2dict(uid)
+        usdict = self._user2dict(uid) if uid in self.users else None
         return defer.succeed(usdict)
 
     def getUserByUsername(self, username):

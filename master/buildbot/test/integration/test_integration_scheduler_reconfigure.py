@@ -26,19 +26,18 @@ from buildbot.test.util.integration import RunMasterBase
 class ShellMaster(RunMasterBase):
 
     def create_config(self):
-        c = {}
         from buildbot.config import BuilderConfig
         from buildbot.process.factory import BuildFactory
         from buildbot.plugins import steps
 
-        c['schedulers'] = [
-            schedulers.AnyBranchScheduler(
-                name="sched1",
-                builderNames=["testy1"]),
-            schedulers.ForceScheduler(
-                name="sched2",
-                builderNames=["testy2"])
-        ]
+        c = {
+            'schedulers': [
+                schedulers.AnyBranchScheduler(
+                    name="sched1", builderNames=["testy1"]
+                ),
+                schedulers.ForceScheduler(name="sched2", builderNames=["testy2"]),
+            ]
+        }
         f = BuildFactory()
         f.addStep(steps.ShellCommand(command='echo hello'))
         c['builders'] = [

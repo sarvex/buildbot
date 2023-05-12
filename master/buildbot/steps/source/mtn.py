@@ -181,16 +181,15 @@ class Monotone(Source):
             if not stdout:
                 continue
             for filename in stdout.strip().split('\n'):
-                filename = self.workdir + '/' + str(filename)
+                filename = f'{self.workdir}/{str(filename)}'
                 files.append(filename)
 
         if not files:
             rc = 0
+        elif self.workerVersionIsOlderThan('rmdir', '2.14'):
+            rc = yield self.removeFiles(files)
         else:
-            if self.workerVersionIsOlderThan('rmdir', '2.14'):
-                rc = yield self.removeFiles(files)
-            else:
-                rc = yield self.runRmdir(files, abandonOnFailure=False)
+            rc = yield self.runRmdir(files, abandonOnFailure=False)
 
         if rc != 0:
             log.msg("Failed removing files")
@@ -217,7 +216,7 @@ class Monotone(Source):
         if self.revision:
             command.extend(['--revision', self.revision])
         else:
-            command.extend(['--revision', 'h:' + self.branch])
+            command.extend(['--revision', f'h:{self.branch}'])
         command.extend(['--branch', self.branch])
         return self._dovccmd(command, workdir=self.workdir,
                              abandonOnFailure=abandonOnFailure)
@@ -228,29 +227,24 @@ class Monotone(Source):
             command.extend(['--ticker=dot'])
         else:
             command.extend(['--ticker=none'])
-        d = self._dovccmd(command, workdir='.',
-                          abandonOnFailure=abandonOnFailure)
-        return d
+        return self._dovccmd(
+            command, workdir='.', abandonOnFailure=abandonOnFailure
+        )
 
     @defer.inlineCallbacks
     def _retryPull(self):
-        if self.retry:
-            abandonOnFailure = (self.retry[1] <= 0)
-        else:
-            abandonOnFailure = True
-
+        abandonOnFailure = (self.retry[1] <= 0) if self.retry else True
         res = yield self._pull(abandonOnFailure)
         if self.retry:
             delay, repeats = self.retry
             if self.stopped or res == 0 or repeats <= 0:
                 return res
-            else:
-                log.msg(f"Checkout failed, trying {repeats} more times after {delay} seconds")
-                self.retry = (delay, repeats - 1)
-                df = defer.Deferred()
-                df.addCallback(lambda _: self._retryPull())
-                reactor.callLater(delay, df.callback, None)
-                yield df
+            log.msg(f"Checkout failed, trying {repeats} more times after {delay} seconds")
+            self.retry = (delay, repeats - 1)
+            df = defer.Deferred()
+            df.addCallback(lambda _: self._retryPull())
+            reactor.callLater(delay, df.callback, None)
+            yield df
         return None
 
     @defer.inlineCallbacks
@@ -287,10 +281,7 @@ class Monotone(Source):
         if abandonOnFailure and cmd.didFail():
             log.msg(f"Source step failed while running command {cmd}")
             raise buildstep.BuildStepFailed()
-        if collectStdout:
-            return cmd.stdout
-        else:
-            return cmd.rc
+        return cmd.stdout if collectStdout else cmd.rc
 
     @defer.inlineCallbacks
     def _checkDb(self):

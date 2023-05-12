@@ -61,16 +61,19 @@ class BuildSetStatusGenerator(BuildStatusGeneratorMixin):
         builds = res['builds']
         buildset = res['buildset']
 
-        # only include builds for which isMessageNeeded returns true
-        builds = [build for build in builds
-                  if self.is_message_needed_by_props(build) and
-                  self.is_message_needed_by_results(build)]
-        if not builds:
+        if builds := [
+            build
+            for build in builds
+            if self.is_message_needed_by_props(build)
+            and self.is_message_needed_by_results(build)
+        ]:
+            return (
+                yield self.buildset_message(
+                    self.formatter, master, reporter, builds, buildset['results']
+                )
+            )
+        else:
             return None
-
-        report = yield self.buildset_message(self.formatter, master, reporter, builds,
-                                             buildset['results'])
-        return report
 
     @defer.inlineCallbacks
     def buildset_message(self, formatter, master, reporter, builds, results):

@@ -62,9 +62,7 @@ class WorkerEndpoint(Db2DataMixin, base.Endpoint):
             name=kwargs.get('name'),
             masterid=kwargs.get('masterid'),
             builderid=kwargs.get('builderid'))
-        if sldict:
-            return self.db2data(sldict)
-        return None
+        return self.db2data(sldict) if sldict else None
 
     @defer.inlineCallbacks
     def control(self, action, args, kwargs):

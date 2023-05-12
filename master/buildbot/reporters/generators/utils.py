@@ -85,10 +85,7 @@ class BuildStatusGeneratorMixin(util.ComparableMixin):
             return True
 
         long_name = f"{log['stepname']}.{log['name']}"
-        if long_name in self.add_logs:
-            return True
-
-        return False
+        return long_name in self.add_logs
 
     def is_message_needed_by_props(self, build):
         # here is where we actually do something.
@@ -102,9 +99,7 @@ class BuildStatusGeneratorMixin(util.ComparableMixin):
             return False
         if self.branches is not None and branch not in self.branches:
             return False
-        if self.tags is not None and not self._matches_any_tag(builder['tags']):
-            return False
-        return True
+        return bool(self.tags is None or self._matches_any_tag(builder['tags']))
 
     def is_message_needed_by_results(self, build):
         results = build['results']
@@ -124,10 +119,7 @@ class BuildStatusGeneratorMixin(util.ComparableMixin):
             return True
         if "exception" in self.mode and results == EXCEPTION:
             return True
-        if "cancelled" in self.mode and results == CANCELLED:
-            return True
-
-        return False
+        return "cancelled" in self.mode and results == CANCELLED
 
     def _merge_msgtype(self, msgtype, new_msgtype):
         if new_msgtype is None:
@@ -142,9 +134,7 @@ class BuildStatusGeneratorMixin(util.ComparableMixin):
         return msgtype, True
 
     def _merge_subject(self, subject, new_subject):
-        if subject is None and new_subject is not None:
-            return new_subject
-        return subject
+        return new_subject if subject is None and new_subject is not None else subject
 
     def _merge_body(self, body, new_body):
         if body is None:

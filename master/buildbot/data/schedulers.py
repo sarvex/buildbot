@@ -51,9 +51,8 @@ class SchedulerEndpoint(Db2DataMixin, base.Endpoint):
     def get(self, resultSpec, kwargs):
         dbdict = yield self.master.db.schedulers.getScheduler(
             kwargs['schedulerid'])
-        if 'masterid' in kwargs:
-            if dbdict['masterid'] != kwargs['masterid']:
-                return None
+        if 'masterid' in kwargs and dbdict['masterid'] != kwargs['masterid']:
+            return None
         return (yield self.db2data(dbdict)) if dbdict else None
 
     @defer.inlineCallbacks

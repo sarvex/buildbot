@@ -31,8 +31,7 @@ class MockStateObserver(logobserver.LogLineObserver):
     _line_re = re.compile(r'^.*(Start|Finish): (.*)$')
 
     def outLineReceived(self, line):
-        m = self._line_re.search(line.strip())
-        if m:
+        if m := self._line_re.search(line.strip()):
             if m.group(1) == "Start":
                 self.step.descriptionSuffix = [f"[{m.group(2)}]"]
             else:
@@ -145,9 +144,8 @@ class MockBuildSRPM(Mock):
         r = re.compile(r"Wrote: .*/([^/]*.src.rpm)")
         while True:
             _, line = yield
-            m = r.search(line)
-            if m:
-                self.setProperty("srpm", m.group(1), 'MockBuildSRPM')
+            if m := r.search(line):
+                self.setProperty("srpm", m[1], 'MockBuildSRPM')
 
 
 class MockRebuild(Mock):

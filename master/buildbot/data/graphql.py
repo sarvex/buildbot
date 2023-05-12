@@ -34,9 +34,7 @@ except ImportError:  # pragma: no cover
 
 
 def _enforce_list(v):
-    if isinstance(v, list):
-        return v
-    return [v]
+    return v if isinstance(v, list) else [v]
 
 
 class GraphQLConnector(service.AsyncService):

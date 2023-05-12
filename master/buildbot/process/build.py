@@ -135,10 +135,10 @@ class Build(properties.PropertiesMixin):
         self.workerEnvironment = env
 
     def getSourceStamp(self, codebase=''):
-        for source in self.sources:
-            if source.codebase == codebase:
-                return source
-        return None
+        return next(
+            (source for source in self.sources if source.codebase == codebase),
+            None,
+        )
 
     def getAllSourceStamps(self):
         return list(self.sources)
@@ -146,8 +146,7 @@ class Build(properties.PropertiesMixin):
     @staticmethod
     def allChangesFromSources(sources):
         for s in sources:
-            for c in s.changes:
-                yield c
+            yield from s.changes
 
     def allChanges(self):
         return Build.allChangesFromSources(self.sources)
@@ -156,8 +155,7 @@ class Build(properties.PropertiesMixin):
         # return a list of all source files that were changed
         files = []
         for c in self.allChanges():
-            for f in c.files:
-                files.append(f)
+            files.extend(iter(c.files))
         return files
 
     def __repr__(self):
@@ -173,18 +171,16 @@ class Build(properties.PropertiesMixin):
         for c in self.allChanges():
             if c.who not in blamelist:
                 blamelist.append(c.who)
-        for source in self.sources:
-            if source.patch:  # Add patch author to blamelist
-                blamelist.append(source.patch_info[0])
+        blamelist.extend(
+            source.patch_info[0] for source in self.sources if source.patch
+        )
         blamelist.sort()
         return blamelist
 
     def changesText(self):
-        changetext = ""
-        for c in self.allChanges():
-            changetext += "-" * 60 + "\n\n" + c.asText() + "\n"
-        # consider sorting these by number
-        return changetext
+        return "".join(
+            "-" * 60 + "\n\n" + c.asText() + "\n" for c in self.allChanges()
+        )
 
     def setStepFactories(self, step_factories):
         """Set a list of 'step factories', which are tuples of (class,
@@ -251,11 +247,11 @@ class Build(properties.PropertiesMixin):
             props.setProperty("project", source.project, "Build")
 
     def setupWorkerBuildirProperty(self, workerforbuilder):
-        path_module = workerforbuilder.worker.path_module
-
         # navigate our way back to the L{buildbot.worker.Worker}
         # object that came from the config, and get its properties
         if workerforbuilder.worker.worker_basedir:
+            path_module = workerforbuilder.worker.path_module
+
             builddir = path_module.join(
                 bytes2unicode(workerforbuilder.worker.worker_basedir),
                 bytes2unicode(self.builder.config.workerbuilddir))
@@ -435,16 +431,17 @@ class Build(properties.PropertiesMixin):
         if self.stopped:
             # if self.stopped, then this failure is a LatentWorker's failure to substantiate
             # which we triggered on purpose in stopBuild()
-            log.msg("worker stopped while " + state_string, why)
+            log.msg(f"worker stopped while {state_string}", why)
             yield self.master.data.updates.finishStep(self.preparation_step.stepid,
                                                       CANCELLED, False)
         else:
-            log.err(why, "while " + state_string)
+            log.err(why, f"while {state_string}")
             self.workerforbuilder.worker.putInQuarantine()
             if isinstance(why, failure.Failure):
                 yield self.preparation_step.addLogWithFailure(why)
-            yield self.master.data.updates.setStepStateString(self.preparation_step.stepid,
-                                                            "error while " + state_string)
+            yield self.master.data.updates.setStepStateString(
+                self.preparation_step.stepid, f"error while {state_string}"
+            )
             yield self.master.data.updates.finishStep(self.preparation_step.stepid,
                                                       EXCEPTION, False)
 
@@ -517,7 +514,7 @@ class Build(properties.PropertiesMixin):
     def addStepsAfterCurrentStep(self, step_factories):
         # Add the new steps after the step that is running.
         # The running step has already been popped from self.steps
-        self.steps[0:0] = self.setupBuildSteps(step_factories)
+        self.steps[:0] = self.setupBuildSteps(step_factories)
 
     def addStepsAfterLastStep(self, step_factories):
         # Add the new steps to the end.
@@ -531,16 +528,15 @@ class Build(properties.PropertiesMixin):
             return None
         if not self.conn:
             return None
-        if self.terminate or self.stopped:
-            # Run any remaining alwaysRun steps, and skip over the others
-            while True:
-                s = self.steps.pop(0)
-                if s.alwaysRun:
-                    return s
-                if not self.steps:
-                    return None
-        else:
+        if not self.terminate and not self.stopped:
             return self.steps.pop(0)
+        # Run any remaining alwaysRun steps, and skip over the others
+        while True:
+            s = self.steps.pop(0)
+            if s.alwaysRun:
+                return s
+            if not self.steps:
+                return None
 
     def startNextStep(self):
         try:

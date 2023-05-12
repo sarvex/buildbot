@@ -136,11 +136,11 @@ class VisualStudio(buildstep.ShellMixin, buildstep.BuildStep):
         try:
             oldval = self.env[name]
             if not oldval.endswith(';'):
-                oldval = oldval + ';'
+                oldval = f'{oldval};'
         except KeyError:
             oldval = ""
         if not value.endswith(';'):
-            value = value + ';'
+            value = f'{value};'
         self.env[name] = oldval + value
 
     @defer.inlineCallbacks
@@ -175,9 +175,7 @@ class VisualStudio(buildstep.ShellMixin, buildstep.BuildStep):
             return results.FAILURE
         if self.logobserver.nbErrors > 0:
             return results.FAILURE
-        if self.logobserver.nbWarnings > 0:
-            return results.WARNINGS
-        return results.SUCCESS
+        return results.WARNINGS if self.logobserver.nbWarnings > 0 else results.SUCCESS
 
     @defer.inlineCallbacks
     def run(self):
@@ -249,21 +247,20 @@ class VC6(VisualStudio):
             "/MAKE"
         ]
         if self.project is not None:
-            command.append(self.project + " - " + self.config)
+            command.append(f"{self.project} - {self.config}")
         else:
-            command.append("ALL - " + self.config)
-        if self.mode == "rebuild":
-            command.append("/REBUILD")
-        elif self.mode == "clean":
+            command.append(f"ALL - {self.config}")
+        if self.mode == "clean":
             command.append("/CLEAN")
+        elif self.mode == "rebuild":
+            command.append("/REBUILD")
         else:
             command.append("/BUILD")
         if self.useenv:
             command.append("/USEENV")
         self.command = command
 
-        res = yield super().run()
-        return res
+        return (yield super().run())
 
 
 class VC7(VisualStudio):
@@ -297,22 +294,20 @@ class VC7(VisualStudio):
             "devenv.com",
             self.projectfile
         ]
-        if self.mode == "rebuild":
-            command.append("/Rebuild")
-        elif self.mode == "clean":
+        if self.mode == "clean":
             command.append("/Clean")
+        elif self.mode == "rebuild":
+            command.append("/Rebuild")
         else:
             command.append("/Build")
         command.append(self.config)
         if self.useenv:
             command.append("/UseEnv")
         if self.project is not None:
-            command.append("/Project")
-            command.append(self.project)
+            command.extend(("/Project", self.project))
         self.command = command
 
-        res = yield super().run()
-        return res
+        return (yield super().run())
 
 
 # alias VC7 as VS2003
@@ -355,9 +350,7 @@ class VC8(VC7):
         self.add_env_path("INCLUDE", VCInstallDir + '\\ATLMFC\\include')
         self.add_env_path("INCLUDE", VCInstallDir + '\\PlatformSDK\\include')
 
-        archsuffix = ''
-        if self.arch == "x64":
-            archsuffix = '\\amd64'
+        archsuffix = '\\amd64' if self.arch == "x64" else ''
         self.add_env_path("LIB", VCInstallDir + '\\LIB' + archsuffix)
         self.add_env_path("LIB", VCInstallDir + '\\ATLMFC\\LIB' + archsuffix)
         self.add_env_path("LIB", VCInstallDir + '\\PlatformSDK\\lib' + archsuffix)
@@ -376,23 +369,20 @@ class VCExpress9(VC8):
             "vcexpress",
             self.projectfile
         ]
-        if self.mode == "rebuild":
-            command.append("/Rebuild")
-        elif self.mode == "clean":
+        if self.mode == "clean":
             command.append("/Clean")
+        elif self.mode == "rebuild":
+            command.append("/Rebuild")
         else:
             command.append("/Build")
         command.append(self.config)
         if self.useenv:
             command.append("/UseEnv")
         if self.project is not None:
-            command.append("/Project")
-            command.append(self.project)
+            command.extend(("/Project", self.project))
         self.command = command
 
-        # Do not use super() here. We want to override VC7.start().
-        res = yield VisualStudio.run(self)
-        return res
+        return (yield VisualStudio.run(self))
 
 
 # Add first support for VC9 (Same as VC8, with a different installdir)
@@ -500,10 +490,10 @@ class MsBuild4(VisualStudio):
         return f'{project} for {self.config}|{self.platform}'
 
     def getCurrentSummary(self):
-        return {'step': 'building ' + self.describe_project()}
+        return {'step': f'building {self.describe_project()}'}
 
     def getResultSummary(self):
-        return {'step': 'built ' + self.describe_project()}
+        return {'step': f'built {self.describe_project()}'}
 
     @defer.inlineCallbacks
     def run(self):
@@ -520,8 +510,7 @@ class MsBuild4(VisualStudio):
 
         self.command = command
 
-        res = yield super().run()
-        return res
+        return (yield super().run())
 
 
 MsBuild = MsBuild4
@@ -568,8 +557,8 @@ class MsBuild141(VisualStudio):
             config.error(
                 'platform is mandatory. Please specify a string such as "Win32"')
 
-        self.description = 'building ' + self.describe_project()
-        self.descriptionDone = 'built ' + self.describe_project()
+        self.description = f'building {self.describe_project()}'
+        self.descriptionDone = f'built {self.describe_project()}'
         yield self.updateSummary()
 
         command = ('FOR /F "tokens=*" %%I in '
@@ -583,8 +572,7 @@ class MsBuild141(VisualStudio):
 
         self.command = command
 
-        res = yield super().run()
-        return res
+        return (yield super().run())
 
 
 MsBuild15 = MsBuild141

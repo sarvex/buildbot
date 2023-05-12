@@ -161,10 +161,7 @@ class ChangesConnectorComponent(base.DBConnectorComponent):
                 whereclause=(changes_tbl.c.changeid == changeid))
             rp = conn.execute(q)
             row = rp.fetchone()
-            if not row:
-                return None
-            # and fetch the ancillary data (files, properties)
-            return self._chdict_from_change_row_thd(conn, row)
+            return None if not row else self._chdict_from_change_row_thd(conn, row)
 
         return self.db.pool.do(thd)
 
@@ -223,10 +220,8 @@ class ChangesConnectorComponent(base.DBConnectorComponent):
             q = q.limit(1)
             rp = conn.execute(q)
             row = rp.fetchone()
-            if not row:
-                return None
-            # and fetch the ancillary data (files, properties)
-            return self._chdict_from_change_row_thd(conn, row)
+            return None if not row else self._chdict_from_change_row_thd(conn, row)
+
         return self.db.pool.do(thd)
 
     # returns a Deferred that returns a value
@@ -333,11 +328,7 @@ class ChangesConnectorComponent(base.DBConnectorComponent):
         change_files_tbl = self.db.model.change_files
         change_properties_tbl = self.db.model.change_properties
 
-        if ch_row.parent_changeids:
-            parent_changeids = [ch_row.parent_changeids]
-        else:
-            parent_changeids = []
-
+        parent_changeids = [ch_row.parent_changeids] if ch_row.parent_changeids else []
         chdict = ChDict(
             changeid=ch_row.changeid,
             parent_changeids=parent_changeids,

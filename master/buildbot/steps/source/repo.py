@@ -62,11 +62,9 @@ class RepoDownloadsFromProperties(util.ComparableMixin):
             return []
         ret = []
         for cur_re in self.parse_download_re:
-            res = cur_re.search(s)
-            while res:
+            while res := cur_re.search(s):
                 ret.append(f"{res.group(1)} {res.group(2)}")
                 s = s[:res.start(0)] + s[res.end(0):]
-                res = cur_re.search(s)
         return ret
 
 
@@ -78,18 +76,18 @@ class RepoDownloadsFromChangeSource(util.ComparableMixin):
         self.codebase = codebase
 
     def getRenderingFor(self, props):
-        downloads = []
         if self.codebase is None:
             changes = props.getBuild().allChanges()
         else:
             changes = props.getBuild().getSourceStamp(self.codebase).changes
-        for change in changes:
-            if ("event.type" in change.properties and
-                    change.properties["event.type"] == "patchset-created"):
-                downloads.append(f'{change.properties["event.change.project"]} '
-                                 f'{change.properties["event.change.number"]}/'
-                                 f'{change.properties["event.patchSet.number"]}')
-        return downloads
+        return [
+            f'{change.properties["event.change.project"]} {change.properties["event.change.number"]}/{change.properties["event.patchSet.number"]}'
+            for change in changes
+            if (
+                "event.type" in change.properties
+                and change.properties["event.type"] == "patchset-created"
+            )
+        ]
 
 
 class Repo(Source):
@@ -181,9 +179,7 @@ class Repo(Source):
         assert self.manifestURL is not None
 
     def computeSourceRevision(self, changes):
-        if not changes:
-            return None
-        return changes[-1].revision
+        return None if not changes else changes[-1].revision
 
     def filterManifestPatches(self):
         """
@@ -197,14 +193,17 @@ class Repo(Source):
         manifest_related_downloads = []
         for download in self.repoDownloads:
             project, ch_ps = download.split(" ")[-2:]
-            if (self.manifestURL.endswith("/" + project) or
-                    self.manifestURL.endswith("/" + project + ".git")):
+            if self.manifestURL.endswith(
+                f"/{project}"
+            ) or self.manifestURL.endswith(f"/{project}.git"):
                 ch, ps = map(int, ch_ps.split("/"))
                 branch = f"refs/changes/{ch % 100:02}/{ch}/{ps}"
-                manifest_related_downloads.append(
-                    ["git", "fetch", self.manifestURL, branch])
-                manifest_related_downloads.append(
-                    ["git", "cherry-pick", "FETCH_HEAD"])
+                manifest_related_downloads.extend(
+                    (
+                        ["git", "fetch", self.manifestURL, branch],
+                        ["git", "cherry-pick", "FETCH_HEAD"],
+                    )
+                )
             else:
                 manifest_unrelated_downloads.append(download)
         self.repoDownloads = manifest_unrelated_downloads
@@ -317,7 +316,7 @@ class Repo(Source):
 
         command = ['sync', '--force-sync']
         if self.jobs:
-            command.append('-j' + str(self.jobs))
+            command.append(f'-j{str(self.jobs)}')
         if not self.syncAllBranches:
             command.append('-c')
         if self.syncQuietly:
@@ -338,7 +337,7 @@ class Repo(Source):
             if not hasattr(self.lastCommand, logname):
                 continue
             msg = getattr(self.lastCommand, logname)
-            if not re.search(error_re, msg) is None:
+            if re.search(error_re, msg) is not None:
                 return True
         return False
 
@@ -396,8 +395,7 @@ class Repo(Source):
         # can be non negligible
         tar = ['tar']
         if self.tarball.endswith("pigz"):
-            tar.append('-I')
-            tar.append('pigz')
+            tar.extend(('-I', 'pigz'))
         elif self.tarball.endswith("gz"):
             tar.append('-z')
         elif self.tarball.endswith("bz2") or self.tarball.endswith("bz"):
@@ -432,10 +430,10 @@ class Repo(Source):
             age = now_mtime - tarball_mtime
         if res or age > self.updateTarballAge:
             tar = self.computeTarballOptions() + \
-                ['-cvf', self.tarball, ".repo"]
+                    ['-cvf', self.tarball, ".repo"]
             res = yield self._Cmd(tar, abandonOnFailure=False)
-            if res:  # error with tarball.. erase tarball, but don't fail
-                yield self._Cmd(["rm", "-f", self.tarball], abandonOnFailure=False)
+        if res:  # error with tarball.. erase tarball, but don't fail
+            yield self._Cmd(["rm", "-f", self.tarball], abandonOnFailure=False)
 
     # a simple shell script to gather all cleanup tweaks...
     # doing them one by one just complicate the stuff

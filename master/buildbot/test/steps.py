@@ -60,8 +60,10 @@ def _dict_diff(d1, d2):
             for sub_key in missing_in_v2:
                 missing_in_d2[f'{k}.{sub_key}'] = d1[k][sub_key]
 
-            for child_k, left, right in different_in_v:
-                different.append((f'{k}.{child_k}', left, right))
+            different.extend(
+                (f'{k}.{child_k}', left, right)
+                for child_k, left, right in different_in_v
+            )
             continue
         if d1[k] != d2[k]:
             different.append((k, d1[k], d2[k]))
@@ -248,7 +250,7 @@ class Expect:
         raise AssertionError(msg)
 
     def __repr__(self):
-        return "Expect(" + repr(self.remote_command) + ")"
+        return f"Expect({repr(self.remote_command)})"
 
 
 class ExpectShell(Expect):
@@ -290,7 +292,11 @@ class ExpectShell(Expect):
         super().__init__("shell", args)
 
     def __repr__(self):
-        return "ExpectShell(" + repr(self.remote_command) + repr(self.args['command']) + ")"
+        return (
+            f"ExpectShell({repr(self.remote_command)}"
+            + repr(self.args['command'])
+            + ")"
+        )
 
 
 class ExpectStat(Expect):
@@ -644,9 +650,7 @@ class TestBuildStepMixin:
         def getWorkerVersion(cmd, oldversion):
             if cmd in worker_version:
                 return worker_version[cmd]
-            if '*' in worker_version:
-                return worker_version['*']
-            return oldversion
+            return worker_version['*'] if '*' in worker_version else oldversion
 
         build.getWorkerCommandVersion = getWorkerVersion
         build.workerEnvironment = worker_env.copy()
@@ -870,11 +874,10 @@ class TestBuildStepMixin:
                 log.msg(f"Unexpected {log_type} log output:\n{exp}")
                 log.msg(f"Expected {log_type} to match:\n{got}")
                 raise AssertionError(f"Unexpected {log_type} log output; see logs")
-        else:
-            if got != exp:
-                log.msg(f"Unexpected {log_type} log output:\n{exp}")
-                log.msg(f"Expected {log_type} log output:\n{got}")
-                raise AssertionError(f"Unexpected {log_type} log output; see logs")
+        elif got != exp:
+            log.msg(f"Unexpected {log_type} log output:\n{exp}")
+            log.msg(f"Expected {log_type} log output:\n{got}")
+            raise AssertionError(f"Unexpected {log_type} log output; see logs")
 
     # callbacks from the running step
 

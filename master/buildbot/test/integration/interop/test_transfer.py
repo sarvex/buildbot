@@ -44,16 +44,15 @@ class TransferStepsMasterPb(RunMasterBase):
 
     @defer.inlineCallbacks
     def setup_config(self, bigfilename):
-        c = {}
         from buildbot.config import BuilderConfig
         from buildbot.process.factory import BuildFactory
         from buildbot.plugins import schedulers
 
-        c['schedulers'] = [
-            schedulers.ForceScheduler(
-                name="force",
-                builderNames=["testy"])]
-
+        c = {
+            'schedulers': [
+                schedulers.ForceScheduler(name="force", builderNames=["testy"])
+            ]
+        }
         f = BuildFactory()
         # do a bunch of transfer to exercise the protocol
         f.addStep(StringDownload("filecontent", workerdest="dir/file1.txt"))
@@ -74,7 +73,6 @@ class TransferStepsMasterPb(RunMasterBase):
 
     @defer.inlineCallbacks
     def setup_config_glob(self):
-        c = {}
         from buildbot.config import BuilderConfig
         from buildbot.process.factory import BuildFactory
         from buildbot.plugins import schedulers
@@ -87,11 +85,11 @@ class TransferStepsMasterPb(RunMasterBase):
                 assert content == "filecontent"
                 return SUCCESS
 
-        c['schedulers'] = [
-            schedulers.ForceScheduler(
-                name="force", builderNames=["testy"])
-        ]
-
+        c = {
+            'schedulers': [
+                schedulers.ForceScheduler(name="force", builderNames=["testy"])
+            ]
+        }
         f = BuildFactory()
         f.addStep(StringDownload("filecontent", workerdest="dir/file1.txt"))
         f.addStep(StringDownload("filecontent2", workerdest="dir/notafile1.txt"))
@@ -109,16 +107,15 @@ class TransferStepsMasterPb(RunMasterBase):
 
     @defer.inlineCallbacks
     def setup_config_single_step(self, step):
-        c = {}
         from buildbot.config import BuilderConfig
         from buildbot.process.factory import BuildFactory
         from buildbot.plugins import schedulers
 
-        c['schedulers'] = [
-            schedulers.ForceScheduler(
-                name="force",
-                builderNames=["testy"])]
-
+        c = {
+            'schedulers': [
+                schedulers.ForceScheduler(name="force", builderNames=["testy"])
+            ]
+        }
         f = BuildFactory()
 
         f.addStep(FileUpload(workersrc="dir/noexist_path", masterdest="master_dest"))

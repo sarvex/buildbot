@@ -98,10 +98,12 @@ class SourceStampExtractor:
     def done(self, res):
         if not self.repository:
             self.repository = self.treetop
-        # TODO: figure out the branch and project too
-        ss = SourceStamp(bytes2unicode(self.branch), self.baserev, self.patch,
-                         repository=self.repository)
-        return ss
+        return SourceStamp(
+            bytes2unicode(self.branch),
+            self.baserev,
+            self.patch,
+            repository=self.repository,
+        )
 
 
 class CVSExtractor(SourceStampExtractor):
@@ -162,9 +164,8 @@ class SVNExtractor(SourceStampExtractor):
         # using that as a base.
 
         for line in res.split(b"\n"):
-            m = re.search(br'^Status against revision:\s+(\d+)', line)
-            if m:
-                self.baserev = m.group(1)
+            if m := re.search(br'^Status against revision:\s+(\d+)', line):
+                self.baserev = m[1]
                 return
         output(
             b"Could not find 'Status against revision' in SVN output: " + res)
@@ -187,7 +188,7 @@ class BzrExtractor(SourceStampExtractor):
 
     def get_revision_number(self, out):
         _, revid = out.split()
-        self.baserev = 'revid:' + revid
+        self.baserev = f'revid:{revid}'
         return
 
     def getPatch(self, res):
@@ -213,9 +214,7 @@ class MercurialExtractor(SourceStampExtractor):
 
     @defer.inlineCallbacks
     def getBaseRevision(self):
-        upstream = ""
-        if self.repository:
-            upstream = f"r'{self.repository}'"
+        upstream = f"r'{self.repository}'" if self.repository else ""
         output = ''
         try:
             output = yield self.dovc(["log", "--template", "{node}\\n", "-r",
@@ -227,10 +226,10 @@ class MercurialExtractor(SourceStampExtractor):
                 raise
             # fall back to current working directory parent
             output = yield self.dovc(["log", "--template", "{node}\\n", "-r", "p1()"])
-        m = re.search(br'^(\w+)', output)
-        if not m:
+        if m := re.search(br'^(\w+)', output):
+            self.baserev = m[0]
+        else:
             raise RuntimeError(f"Revision {output!r} is not in the right format")
-        self.baserev = m.group(0)
 
     def getPatch(self, res):
         d = self.dovc(["diff", "-r", self.baserev])
@@ -248,12 +247,8 @@ class PerforceExtractor(SourceStampExtractor):
         return d
 
     def parseStatus(self, res):
-        #
-        # extract the base change number
-        #
-        m = re.search(br'Change (\d+)', res)
-        if m:
-            self.baserev = m.group(1)
+        if m := re.search(br'Change (\d+)', res):
+            self.baserev = m[1]
             return
 
         output(b"Could not find change number in output: " + res)
@@ -269,11 +264,11 @@ class PerforceExtractor(SourceStampExtractor):
         mpatch = ""
         found = False
         for line in diff.split("\n"):
-            m = re.search('==== //depot/' + self.branch
-                          + r'/([\w/\.\d\-_]+)#(\d+) -', line)
-            if m:
-                mpatch += f"--- {m.group(1)}#{m.group(2)}\n"
-                mpatch += f"+++ {m.group(1)}\n"
+            if m := re.search(
+                f'==== //depot/{self.branch}' + r'/([\w/\.\d\-_]+)#(\d+) -', line
+            ):
+                mpatch += f"--- {m[1]}#{m[2]}\n"
+                mpatch += f"+++ {m[1]}\n"
                 found = True
             else:
                 mpatch += line
@@ -337,7 +332,7 @@ class GitExtractor(SourceStampExtractor):
     def fixBranch(self, remotes):
         for l in bytes2unicode(remotes).split("\n"):
             r = l.strip()
-            if r and self.branch.startswith(r + "/"):
+            if r and self.branch.startswith(f"{r}/"):
                 self.branch = self.branch[len(r) + 1:]
                 break
 
@@ -376,14 +371,9 @@ class GitExtractor(SourceStampExtractor):
         self.baserev = bytes2unicode(res).strip()
 
     def parseStatus(self, res):
-        # The current branch is marked by '*' at the start of the
-        # line, followed by the branch name and the SHA1.
-        #
-        # Branch names may contain pretty much anything but whitespace.
-        m = re.search(br'^\* (\S+)\s+([0-9a-f]{40})', res, re.MULTILINE)
-        if m:
-            self.baserev = m.group(2)
-            self.branch = m.group(1)
+        if m := re.search(br'^\* (\S+)\s+([0-9a-f]{40})', res, re.MULTILINE):
+            self.baserev = m[2]
+            self.branch = m[1]
             d = self.readConfig()
             d.addCallback(self.parseTrackingBranch)
             return d
@@ -563,8 +553,7 @@ class Try(pb.Referenceable):
         # common options
         branch = self.getopt("branch")
 
-        difffile = self.config.get("diff")
-        if difffile:
+        if difffile := self.config.get("diff"):
             baserev = self.config.get("baserev")
             if difffile == "-":
                 diff = sys.stdin.read()
@@ -580,17 +569,13 @@ class Try(pb.Referenceable):
         else:
             vc = self.getopt("vc")
             if vc in ("cvs", "svn"):
-                # we need to find the tree-top
-                topdir = self.getopt("topdir")
-                if topdir:
+                if topdir := self.getopt("topdir"):
                     treedir = os.path.expanduser(topdir)
+                elif topfile := self.getopt("topfile"):
+                    treedir = getTopdir(topfile)
                 else:
-                    topfile = self.getopt("topfile")
-                    if topfile:
-                        treedir = getTopdir(topfile)
-                    else:
-                        output("Must specify topdir or topfile.")
-                        sys.exit(1)
+                    output("Must specify topdir or topfile.")
+                    sys.exit(1)
             else:
                 treedir = os.getcwd()
             d = getSourceStamp(vc, treedir, branch, self.getopt("repository"))
@@ -629,31 +614,26 @@ class Try(pb.Referenceable):
         tryuser = self.getopt("username")
         trydir = self.getopt("jobdir")
         buildbotbin = self.getopt("buildbotbin")
-        ssh_command = self.getopt("ssh")
-        if not ssh_command:
-            ssh_commands = which("ssh")
-            if not ssh_commands:
-                raise RuntimeError("couldn't find ssh executable, make sure "
-                                   "it is available in the PATH")
-
-            argv = [ssh_commands[0]]
-        else:
+        if ssh_command := self.getopt("ssh"):
             # Split the string on whitespace to allow passing options in
             # ssh command too, but preserving whitespace inside quotes to
             # allow using paths with spaces in them which is common under
             # Windows. And because Windows uses backslashes in paths, we
             # can't just use shlex.split there as it would interpret them
             # specially, so do it by hand.
-            if runtime.platformType == 'win32':
-                # Note that regex here matches the arguments, not the
-                # separators, as it's simpler to do it like this. And then we
-                # just need to get all of them together using the slice and
-                # also remove the quotes from those that were quoted.
-                argv = [string.strip(a, '"') for a in
-                        re.split(r'''([^" ]+|"[^"]+")''', ssh_command)[1::2]]
-            else:
-                # Do use standard tokenization logic under POSIX.
-                argv = shlex.split(ssh_command)
+            argv = (
+                [
+                    string.strip(a, '"')
+                    for a in re.split(r'''([^" ]+|"[^"]+")''', ssh_command)[1::2]
+                ]
+                if runtime.platformType == 'win32'
+                else shlex.split(ssh_command)
+            )
+        elif ssh_commands := which("ssh"):
+            argv = [ssh_commands[0]]
+        else:
+            raise RuntimeError("couldn't find ssh executable, make sure "
+                               "it is available in the PATH")
 
         if tryuser:
             argv += ["-l", tryuser]
@@ -833,10 +813,7 @@ class Try(pb.Referenceable):
             if code != SUCCESS:
                 happy = False
 
-        if happy:
-            self.exitcode = 0
-        else:
-            self.exitcode = 1
+        self.exitcode = 0 if happy else 1
         self.running.callback(self.exitcode)
 
     @defer.inlineCallbacks

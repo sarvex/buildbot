@@ -44,9 +44,7 @@ class StatsService(service.BuildbotService):
         self.checkConfig(storage_backends)
 
         self.registeredStorageServices = []
-        for svc in storage_backends:
-            self.registeredStorageServices.append(svc)
-
+        self.registeredStorageServices.extend(iter(storage_backends))
         yield self.removeConsumers()
         yield self.registerConsumers()
 

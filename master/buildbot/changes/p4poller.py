@@ -188,9 +188,7 @@ class P4Source(base.ReconfigurablePollingChangeSource, util.ComparableMixin):
                                       pollRandomDelayMax=pollRandomDelayMax)
 
     def build_name(self, name, p4port, p4base):
-        if name is not None:
-            return name
-        return f"P4Source:{p4port}:{p4base}"
+        return name if name is not None else f"P4Source:{p4port}:{p4base}"
 
     def describe(self):
         return f"p4source {self.p4port} {self.p4base}"

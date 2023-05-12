@@ -36,9 +36,11 @@ class Db2DataMixin:
         """
         # by default none properties are returned
         if props and filters:
-            return (props
-                    if '*' in filters
-                    else dict(((k, v) for k, v in props.items() if k in filters)))
+            return (
+                props
+                if '*' in filters
+                else {k: v for k, v in props.items() if k in filters}
+            )
         return None
 
     def db2data(self, dbdict):
@@ -102,9 +104,9 @@ class BuildEndpoint(Db2DataMixin, base.BuildNestingMixin, base.Endpoint):
                     props = yield self.master.db.builds.getBuildProperties(data['buildid'])
                 except (KeyError, TypeError):
                     props = {}
-                filtered_properties = self._generate_filtered_properties(
-                    props, filters)
-                if filtered_properties:
+                if filtered_properties := self._generate_filtered_properties(
+                    props, filters
+                ):
                     data['properties'] = filtered_properties
         return data
 
@@ -126,8 +128,7 @@ class BuildEndpoint(Db2DataMixin, base.BuildNestingMixin, base.Endpoint):
         # the pathPatterns of this endpoint
         build = yield self.get(ResultSpec(), kwargs)
         buildrequest = yield self.master.data.get(('buildrequests', build['buildrequestid']))
-        res = yield self.master.data.updates.rebuildBuildrequest(buildrequest)
-        return res
+        return (yield self.master.data.updates.rebuildBuildrequest(buildrequest))
 
 
 class BuildsEndpoint(Db2DataMixin, base.BuildNestingMixin, base.Endpoint):
@@ -175,13 +176,12 @@ class BuildsEndpoint(Db2DataMixin, base.BuildNestingMixin, base.Endpoint):
             if kwargs.get('graphql'):
                 # let the graphql engine manage the properties
                 del data['properties']
-            else:
-                # Avoid to request DB for Build's properties if not specified
-                if filters:
-                    props = yield self.master.db.builds.getBuildProperties(data["buildid"])
-                    filtered_properties = self._generate_filtered_properties(props, filters)
-                    if filtered_properties:
-                        data["properties"] = filtered_properties
+            elif filters:
+                props = yield self.master.db.builds.getBuildProperties(data["buildid"])
+                if filtered_properties := self._generate_filtered_properties(
+                    props, filters
+                ):
+                    data["properties"] = filtered_properties
 
             buildscol.append(data)
         return buildscol
@@ -224,13 +224,15 @@ class Build(base.ResourceType):
     @base.updateMethod
     @defer.inlineCallbacks
     def addBuild(self, builderid, buildrequestid, workerid):
-        res = yield self.master.db.builds.addBuild(
-            builderid=builderid,
-            buildrequestid=buildrequestid,
-            workerid=workerid,
-            masterid=self.master.masterid,
-            state_string='created')
-        return res
+        return (
+            yield self.master.db.builds.addBuild(
+                builderid=builderid,
+                buildrequestid=buildrequestid,
+                workerid=workerid,
+                masterid=self.master.masterid,
+                state_string='created',
+            )
+        )
 
     @base.updateMethod
     def generateNewBuildEvent(self, buildid):

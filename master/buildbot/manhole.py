@@ -107,7 +107,7 @@ if conchc:
 
         def checkKey(self, credentials):
             with open(self.authorized_keys_file, "rb") as f:
-                for l in f.readlines():
+                for l in f:
                     l2 = l.split()
                     if len(l2) < 2:
                         continue
@@ -199,10 +199,7 @@ class _BaseManhole(service.AsyncMultiService):
         s.setServiceParent(self)
 
     def startService(self):
-        if self.using_ssh:
-            via = "via SSH"
-        else:
-            via = "via telnet"
+        via = "via SSH" if self.using_ssh else "via telnet"
         log.msg(f"Manhole listening {via} on port {self.port}")
         return super().startService()
 
@@ -293,7 +290,7 @@ def show(x):
             continue
         if isinstance(v, str):
             if len(v) > 80 - maxlen - 5:
-                v = repr(v[:80 - maxlen - 5]) + "..."
+                v = f"{repr(v[:80 - maxlen - 5])}..."
         elif isinstance(v, (int, type(None))):
             v = str(v)
         elif isinstance(v, (list, tuple, dict)):
