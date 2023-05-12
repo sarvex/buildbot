@@ -88,6 +88,4 @@ class DebLintian(buildstep.ShellMixin, buildstep.BuildStep):
 
         if cmd.rc != 0 or errors:
             return FAILURE
-        if warnings:
-            return WARNINGS
-        return SUCCESS
+        return WARNINGS if warnings else SUCCESS

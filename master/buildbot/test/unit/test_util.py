@@ -145,23 +145,26 @@ class TestFuzzyInterval(unittest.TestCase):
 class safeTranslate(unittest.TestCase):
 
     def test_str_good(self):
-        self.assertEqual(util.safeTranslate(str("full")), b"full")
+        self.assertEqual(util.safeTranslate("full"), b"full")
 
     def test_str_bad(self):
-        self.assertEqual(util.safeTranslate(str("speed=slow;quality=high")),
-                         b"speed_slow_quality_high")
+        self.assertEqual(
+            util.safeTranslate("speed=slow;quality=high"),
+            b"speed_slow_quality_high",
+        )
 
     def test_str_pathological(self):
         # if you needed proof this wasn't for use with sensitive data
-        self.assertEqual(util.safeTranslate(str("p\ath\x01ogy")),
-                         b"p\ath\x01ogy")  # bad chars still here!
+        self.assertEqual(util.safeTranslate("p\ath\x01ogy"), b"p\ath\x01ogy")
 
     def test_unicode_good(self):
         self.assertEqual(util.safeTranslate("full"), b"full")
 
     def test_unicode_bad(self):
-        self.assertEqual(util.safeTranslate(str("speed=slow;quality=high")),
-                         b"speed_slow_quality_high")
+        self.assertEqual(
+            util.safeTranslate("speed=slow;quality=high"),
+            b"speed_slow_quality_high",
+        )
 
     def test_unicode_pathological(self):
         self.assertEqual(util.safeTranslate("\u0109"),
@@ -228,23 +231,23 @@ class DiffSets(unittest.TestCase):
 
     def test_no_lists(self):
         removed, added = util.diffSets([1, 2], [2, 3])
-        self.assertEqual((removed, added), (set([1]), set([3])))
+        self.assertEqual((removed, added), ({1}, {3}))
 
     def test_no_overlap(self):
-        removed, added = util.diffSets(set([1, 2]), set([3, 4]))
-        self.assertEqual((removed, added), (set([1, 2]), set([3, 4])))
+        removed, added = util.diffSets({1, 2}, {3, 4})
+        self.assertEqual((removed, added), ({1, 2}, {3, 4}))
 
     def test_no_change(self):
-        removed, added = util.diffSets(set([1, 2]), set([1, 2]))
+        removed, added = util.diffSets({1, 2}, {1, 2})
         self.assertEqual((removed, added), (set([]), set([])))
 
     def test_added(self):
-        removed, added = util.diffSets(set([1, 2]), set([1, 2, 3]))
-        self.assertEqual((removed, added), (set([]), set([3])))
+        removed, added = util.diffSets({1, 2}, {1, 2, 3})
+        self.assertEqual((removed, added), (set([]), {3}))
 
     def test_removed(self):
-        removed, added = util.diffSets(set([1, 2]), set([1]))
-        self.assertEqual((removed, added), (set([2]), set([])))
+        removed, added = util.diffSets({1, 2}, {1})
+        self.assertEqual((removed, added), ({2}, set([])))
 
 
 class MakeList(unittest.TestCase):

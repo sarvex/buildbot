@@ -42,18 +42,20 @@ class ForceSchedulerEndpoint(base.Endpoint):
     """
 
     def findForceScheduler(self, schedulername):
-        # eventually this may be db backed. This is why the API is async
-        for sched in self.master.allSchedulers():
-            if sched.name == schedulername and isinstance(sched, forcesched.ForceScheduler):
-                return defer.succeed(sched)
-        return None
+        return next(
+            (
+                defer.succeed(sched)
+                for sched in self.master.allSchedulers()
+                if sched.name == schedulername
+                and isinstance(sched, forcesched.ForceScheduler)
+            ),
+            None,
+        )
 
     @defer.inlineCallbacks
     def get(self, resultSpec, kwargs):
         sched = yield self.findForceScheduler(kwargs['schedulername'])
-        if sched is not None:
-            return forceScheduler2Data(sched)
-        return None
+        return forceScheduler2Data(sched) if sched is not None else None
 
     @defer.inlineCallbacks
     def control(self, action, args, kwargs):
@@ -62,8 +64,7 @@ class ForceSchedulerEndpoint(base.Endpoint):
             if "owner" not in args:
                 args['owner'] = "user"
             try:
-                res = yield sched.force(**args)
-                return res
+                return (yield sched.force(**args))
             except forcesched.CollectedValidationError as e:
                 raise BadJsonRpc2(e.errors, JSONRPC_CODES["invalid_params"]) from e
         return None
@@ -80,16 +81,15 @@ class ForceSchedulersEndpoint(base.Endpoint):
 
     @defer.inlineCallbacks
     def get(self, resultSpec, kwargs):
-        ret = []
         builderid = kwargs.get('builderid', None)
         if builderid is not None:
             bdict = yield self.master.db.builders.getBuilder(builderid)
-        for sched in self.master.allSchedulers():
-            if isinstance(sched, forcesched.ForceScheduler):
-                if builderid is not None and bdict['name'] not in sched.builderNames:
-                    continue
-                ret.append(forceScheduler2Data(sched))
-        return ret
+        return [
+            forceScheduler2Data(sched)
+            for sched in self.master.allSchedulers()
+            if isinstance(sched, forcesched.ForceScheduler)
+            and (builderid is None or bdict['name'] in sched.builderNames)
+        ]
 
 
 class ForceScheduler(base.ResourceType):

@@ -80,18 +80,17 @@ def loadConfigDict(basedir, configFileName):
     old_sys_path = sys.path[:]
     sys.path.append(basedir)
     try:
-        try:
-            execfile(filename, localDict)
-        except ConfigErrors:
-            raise
-        except SyntaxError:
-            error(
-                f"encountered a SyntaxError while parsing config file:\n{traceback.format_exc()} ",
-                always_raise=True)
-        except Exception:
-            log.err(failure.Failure(), 'error while parsing config file:')
-            error(f"error while parsing config file: {sys.exc_info()[1]} (traceback in logfile)",
-                  always_raise=True)
+        execfile(filename, localDict)
+    except ConfigErrors:
+        raise
+    except SyntaxError:
+        error(
+            f"encountered a SyntaxError while parsing config file:\n{traceback.format_exc()} ",
+            always_raise=True)
+    except Exception:
+        log.err(failure.Failure(), 'error while parsing config file:')
+        error(f"error while parsing config file: {sys.exc_info()[1]} (traceback in logfile)",
+              always_raise=True)
     finally:
         sys.path[:] = old_sys_path
 
@@ -246,9 +245,7 @@ class MasterConfig(util.ComparableMixin):
         # warning, all of this is loaded from a thread
 
         with capture_config_errors(raise_on_error=True):
-            # check for unknown keys
-            unknown_keys = set(config_dict.keys()) - cls._known_config_keys
-            if unknown_keys:
+            if unknown_keys := set(config_dict.keys()) - cls._known_config_keys:
                 if len(unknown_keys) == 1:
                     error(f'Unknown BuildmasterConfig key {unknown_keys.pop()}')
                 else:
@@ -433,30 +430,24 @@ class MasterConfig(util.ComparableMixin):
         validation = config_dict.get("validation", {})
         if not isinstance(validation, dict):
             error("c['validation'] must be a dictionary")
+        elif unknown_keys := (set(validation.keys()) - set(self.validation.keys())):
+            error(f"unrecognized validation key(s): {', '.join(unknown_keys)}")
         else:
-            unknown_keys = (
-                set(validation.keys()) - set(self.validation.keys()))
-            if unknown_keys:
-                error(f"unrecognized validation key(s): {', '.join(unknown_keys)}")
-            else:
-                self.validation.update(validation)
+            self.validation.update(validation)
 
     @staticmethod
     def getDbUrlFromConfig(config_dict, throwErrors=True):
 
         if 'db' in config_dict:
             db = config_dict['db']
-            if set(db.keys()) - set(['db_url']) and throwErrors:
+            if set(db.keys()) - {'db_url'} and throwErrors:
                 error("unrecognized keys in c['db']")
 
             config_dict = db
 
         # we don't attempt to parse db URLs here - the engine strategy will do
         # so.
-        if 'db_url' in config_dict:
-            return config_dict['db_url']
-
-        return DEFAULT_DB_URL
+        return config_dict['db_url'] if 'db_url' in config_dict else DEFAULT_DB_URL
 
     def load_db(self, filename, config_dict):
         self.db = dict(db_url=self.getDbUrlFromConfig(config_dict))
@@ -473,8 +464,7 @@ class MasterConfig(util.ComparableMixin):
             return
 
         known_keys = classes[typ]['keys']
-        unk = set(self.mq.keys()) - known_keys - set(['type'])
-        if unk:
+        if unk := set(self.mq.keys()) - known_keys - {'type'}:
             error(f"unrecognized keys in c['mq']: {', '.join(unk)}")
 
     def load_metrics(self, filename, config_dict):
@@ -544,7 +534,7 @@ class MasterConfig(util.ComparableMixin):
                 error(f"scheduler name '{s.name}' used multiple times")
             seen_names.add(s.name)
 
-        self.schedulers = dict((s.name, s) for s in schedulers)
+        self.schedulers = {s.name: s for s in schedulers}
 
     def load_builders(self, filename, config_dict):
         if 'builders' not in config_dict:
@@ -655,8 +645,8 @@ class MasterConfig(util.ComparableMixin):
             return
         user_managers = config_dict['user_managers']
 
-        msg = "c['user_managers'] must be a list of user managers"
         if not isinstance(user_managers, (list, tuple)):
+            msg = "c['user_managers'] must be a list of user managers"
             error(msg)
             return
 
@@ -690,9 +680,7 @@ class MasterConfig(util.ComparableMixin):
             'ws_ping_interval',
             'graphql',
         }
-        unknown = set(list(www_cfg)) - allowed
-
-        if unknown:
+        if unknown := set(list(www_cfg)) - allowed:
             error(f"unknown www configuration parameter(s) {', '.join(unknown)}")
 
         versions = www_cfg.get('versions')
@@ -710,10 +698,11 @@ class MasterConfig(util.ComparableMixin):
             www_cfg['versions'] = cleaned_versions
 
         cookie_expiration_time = www_cfg.get('cookie_expiration_time')
-        if cookie_expiration_time is not None:
-            if not isinstance(cookie_expiration_time, datetime.timedelta):
-                error('Invalid www["cookie_expiration_time"] configuration should '
-                      'be a datetime.timedelta')
+        if cookie_expiration_time is not None and not isinstance(
+            cookie_expiration_time, datetime.timedelta
+        ):
+            error('Invalid www["cookie_expiration_time"] configuration should '
+                  'be a datetime.timedelta')
 
         self.www.update(www_cfg)
 
@@ -807,8 +796,7 @@ class MasterConfig(util.ComparableMixin):
         seen_builddirs = set()
 
         for b in self.builders:
-            unknowns = set(b.workernames) - workernames
-            if unknowns:
+            if unknowns := set(b.workernames) - workernames:
                 error(f"builder '{b.name}' uses unknown workers "
                       f"{', '.join(repr(u) for u in unknowns)}")
             if b.name in seen_names:
@@ -823,10 +811,7 @@ class MasterConfig(util.ComparableMixin):
         ports = set()
         if self.protocols:
             for proto, options in self.protocols.items():
-                if proto == 'null':
-                    port = -1
-                else:
-                    port = options.get("port")
+                port = -1 if proto == 'null' else options.get("port")
                 if port is None:
                     continue
                 if isinstance(port, int):

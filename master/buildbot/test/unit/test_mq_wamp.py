@@ -68,10 +68,10 @@ class FakeWampConnector:
         owntopic = self.topic.split(".")
         if len(topic) != len(owntopic):
             return False
-        for i, itopic in enumerate(topic):
-            if owntopic[i] != "" and itopic != owntopic[i]:
-                return False
-        return True
+        return not any(
+            owntopic[i] != "" and itopic != owntopic[i]
+            for i, itopic in enumerate(topic)
+        )
 
     def subscribe(self, callback, topic=None, options=None):
         # record the topic, and to make sure subsequent publish

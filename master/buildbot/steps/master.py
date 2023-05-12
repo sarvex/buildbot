@@ -212,9 +212,7 @@ class Assert(BuildStep):
         self.descriptionDone = [f"checked {repr(self.check)}"]
 
     def run(self):
-        if self.check:
-            return defer.succeed(SUCCESS)
-        return defer.succeed(FAILURE)
+        return defer.succeed(SUCCESS) if self.check else defer.succeed(FAILURE)
 
 
 class LogRenderable(BuildStep):

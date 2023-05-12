@@ -65,17 +65,20 @@ class KubernetesMaster(RunMasterBase):
     def setup_config(self, num_concurrent, extra_steps=None):
         if extra_steps is None:
             extra_steps = []
-        c = {}
+        c = {
+            'schedulers': [
+                schedulers.ForceScheduler(name="force", builderNames=["testy"])
+            ]
+        }
 
-        c['schedulers'] = [
-            schedulers.ForceScheduler(name="force", builderNames=["testy"])
-        ]
         triggereables = []
         for i in range(num_concurrent):
             c['schedulers'].append(
                 schedulers.Triggerable(
-                    name="trigsched" + str(i), builderNames=["build"]))
-            triggereables.append("trigsched" + str(i))
+                    name=f"trigsched{str(i)}", builderNames=["build"]
+                )
+            )
+            triggereables.append(f"trigsched{str(i)}")
 
         f = BuildFactory()
         f.addStep(steps.ShellCommand(command='echo hello'))
@@ -93,17 +96,21 @@ class KubernetesMaster(RunMasterBase):
             BuilderConfig(name="testy", workernames=["kubernetes0"], factory=f),
             BuilderConfig(
                 name="build",
-                workernames=["kubernetes" + str(i) for i in range(num_concurrent)],
-                factory=f2)
+                workernames=[f"kubernetes{str(i)}" for i in range(num_concurrent)],
+                factory=f2,
+            ),
         ]
         masterFQDN = os.environ.get('masterFQDN')
         c['workers'] = [
             kubernetes.KubeLatentWorker(
-                'kubernetes' + str(i),
+                f'kubernetes{str(i)}',
                 'buildbot/buildbot-worker',
                 kube_config=kubeclientservice.KubeCtlProxyConfigLoader(
-                    namespace=os.getenv("KUBE_NAMESPACE", "default")),
-                masterFQDN=masterFQDN) for i in range(num_concurrent)
+                    namespace=os.getenv("KUBE_NAMESPACE", "default")
+                ),
+                masterFQDN=masterFQDN,
+            )
+            for i in range(num_concurrent)
         ]
         # un comment for debugging what happens if things looks locked.
         # c['www'] = {'port': 8080}

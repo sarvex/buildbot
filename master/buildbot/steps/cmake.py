@@ -71,9 +71,7 @@ class CMake(ShellMixin, BuildStep):
             ])
 
         if self.definitions is not None:
-            for item in self.definitions.items():
-                command.append(f'-D{item[0]}={item[1]}')
-
+            command.extend(f'-D{item[0]}={item[1]}' for item in self.definitions.items())
         if self.options is not None:
             command.extend(self.options)
 

@@ -84,9 +84,7 @@ class FakeLogsComponent(FakeDBComponent):
 
     def getLog(self, logid):
         row = self.logs.get(logid)
-        if not row:
-            return defer.succeed(None)
-        return defer.succeed(self._row2dict(row))
+        return defer.succeed(None) if not row else defer.succeed(self._row2dict(row))
 
     def getLogBySlug(self, stepid, slug):
         row = None

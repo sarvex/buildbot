@@ -58,21 +58,15 @@ def get_detected_status_text(mode, results, previous_results):
 
 def get_message_summary_text(build, results):
     t = build['state_string']
-    if t:
-        t = ": " + t
-    else:
-        t = ""
-
+    t = f": {t}" if t else ""
     if results == SUCCESS:
-        text = "Build succeeded!"
+        return "Build succeeded!"
     elif results == WARNINGS:
-        text = f"Build Had Warnings{t}"
+        return f"Build Had Warnings{t}"
     elif results == CANCELLED:
-        text = "Build was cancelled"
+        return "Build was cancelled"
     else:
-        text = f"BUILD FAILED{t}"
-
-    return text
+        return f"BUILD FAILED{t}"
 
 
 def get_message_source_stamp_text(source_stamps):
@@ -84,11 +78,7 @@ def get_message_source_stamp_text(source_stamps):
         if ss['branch']:
             source += f"[branch {ss['branch']}] "
 
-        if ss['revision']:
-            source += str(ss['revision'])
-        else:
-            source += "HEAD"
-
+        source += str(ss['revision']) if ss['revision'] else "HEAD"
         if ss['patch'] is not None:
             source += " (plus patch)"
 
@@ -102,12 +92,7 @@ def get_message_source_stamp_text(source_stamps):
 
 
 def get_projects_text(source_stamps, master):
-    projects = set()
-
-    for ss in source_stamps:
-        if ss['project']:
-            projects.add(ss['project'])
-
+    projects = {ss['project'] for ss in source_stamps if ss['project']}
     if not projects:
         projects = [master.config.title]
 
@@ -125,7 +110,7 @@ def create_context_for_build(mode, build, is_buildset, master, blamelist):
         previous_results = None
 
     return {
-        'results': build['results'],
+        'results': results,
         'result_names': Results,
         'mode': mode,
         'buildername': build['builder']['name'],
@@ -135,13 +120,17 @@ def create_context_for_build(mode, build, is_buildset, master, blamelist):
         'is_buildset': is_buildset,
         'projects': get_projects_text(ss_list, master),
         'previous_results': previous_results,
-        'status_detected': get_detected_status_text(mode, results, previous_results),
-        'build_url': utils.getURLForBuild(master, build['builder']['builderid'], build['number']),
+        'status_detected': get_detected_status_text(
+            mode, results, previous_results
+        ),
+        'build_url': utils.getURLForBuild(
+            master, build['builder']['builderid'], build['number']
+        ),
         'buildbot_title': master.config.title,
         'buildbot_url': master.config.buildbotURL,
         'blamelist': blamelist,
         'summary': get_message_summary_text(build, results),
-        'sourcestamps': get_message_source_stamp_text(ss_list)
+        'sourcestamps': get_message_source_stamp_text(ss_list),
     }
 
 
@@ -256,8 +245,7 @@ class MessageFormatterFunction(MessageFormatterBase):
 
     @defer.inlineCallbacks
     def format_message_for_build(self, master, build, **kwargs):
-        msgdict = yield self.render_message_dict(master, {'build': build})
-        return msgdict
+        return (yield self.render_message_dict(master, {'build': build}))
 
     def render_message_body(self, context):
         return self._function(context)
@@ -277,24 +265,25 @@ class MessageFormatterRenderable(MessageFormatterBase):
 
     @defer.inlineCallbacks
     def format_message_for_build(self, master, build, **kwargs):
-        msgdict = yield self.render_message_dict(master, {'build': build, 'master': master})
-        return msgdict
+        return (
+            yield self.render_message_dict(
+                master, {'build': build, 'master': master}
+            )
+        )
 
     @defer.inlineCallbacks
     def render_message_body(self, context):
         props = Properties.fromDict(context['build']['properties'])
         props.master = context['master']
 
-        body = yield props.render(self.template)
-        return body
+        return (yield props.render(self.template))
 
     @defer.inlineCallbacks
     def render_message_subject(self, context):
         props = Properties.fromDict(context['build']['properties'])
         props.master = context['master']
 
-        body = yield props.render(self.subject)
-        return body
+        return (yield props.render(self.subject))
 
 
 default_body_template_plain = '''\
@@ -410,8 +399,7 @@ class MessageFormatter(MessageFormatterBaseJinja):
     @defer.inlineCallbacks
     def format_message_for_build(self, master, build, is_buildset=False, users=None, mode=None):
         ctx = create_context_for_build(mode, build, is_buildset, master, users)
-        msgdict = yield self.render_message_dict(master, ctx)
-        return msgdict
+        return (yield self.render_message_dict(master, ctx))
 
 
 default_missing_template_plain = '''\
@@ -459,5 +447,4 @@ class MessageFormatterMissingWorker(MessageFormatterBaseJinja):
     @defer.inlineCallbacks
     def formatMessageForMissingWorker(self, master, worker):
         ctx = create_context_for_worker(master, worker)
-        msgdict = yield self.render_message_dict(master, ctx)
-        return msgdict
+        return (yield self.render_message_dict(master, ctx))

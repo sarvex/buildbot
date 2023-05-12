@@ -78,9 +78,7 @@ class RpmBuild(buildstep.ShellMixin, buildstep.BuildStep):
     @defer.inlineCallbacks
     def run(self):
 
-        rpm_extras_dict = {}
-        rpm_extras_dict['dist'] = self.dist
-
+        rpm_extras_dict = {'dist': self.dist}
         if self.autoRelease:
             relfile = f"{os.path.basename(self.specfile).split('.')[0]}.release"
             try:

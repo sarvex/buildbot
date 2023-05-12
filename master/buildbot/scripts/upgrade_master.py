@@ -47,9 +47,9 @@ def installFile(config, target, source, overwrite=False):
                 if not config['quiet']:
                     print(f"{target} has old/modified contents")
                     print(f" writing new contents to {target}.new")
-                with open(target + ".new", "wt", encoding='utf-8') as f:
+                with open(f"{target}.new", "wt", encoding='utf-8') as f:
                     f.write(new_contents)
-        # otherwise, it's up to date
+            # otherwise, it's up to date
     else:
         if not config['quiet']:
             print(f"creating {target}")
@@ -125,10 +125,10 @@ def upgradeMaster(config, _noMonkey=False):
         e = traceback.format_exc()
         print(e, file=sys.stderr)
         return defer.succeed(1)
-    master_cfg = base.loadConfig(config, configFile)
-    if not master_cfg:
+    if master_cfg := base.loadConfig(config, configFile):
+        return _upgradeMaster(config, master_cfg)
+    else:
         return defer.succeed(1)
-    return _upgradeMaster(config, master_cfg)
 
 
 @defer.inlineCallbacks

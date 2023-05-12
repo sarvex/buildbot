@@ -18,6 +18,7 @@
 """
 Standard setup script.
 """
+
 from setuptools import setup  # isort:skip
 
 
@@ -32,7 +33,7 @@ from pkg_resources import parse_version
 
 from buildbot import version
 
-BUILDING_WHEEL = bool("bdist_wheel" in sys.argv)
+BUILDING_WHEEL = "bdist_wheel" in sys.argv
 
 
 def include(d, e):
@@ -45,10 +46,10 @@ def include(d, e):
 
 
 def include_statics(d):
-    r = []
-    for root, _, fs in os.walk(d):
-        r.append((root, [os.path.join(root, f) for f in fs]))
-    return r
+    return [
+        (root, [os.path.join(root, f) for f in fs])
+        for root, _, fs in os.walk(d)
+    ]
 
 
 class install_data_twisted(install_data):
@@ -108,7 +109,7 @@ def define_plugin_entry(name, module_name):
 def concat_dicts(*dicts):
     result = {}
     for d in dicts:
-        result.update(d)
+        result |= d
     return result
 
 
@@ -483,9 +484,8 @@ if 'a' in version or 'b' in version:
     except pkg_resources.DistributionNotFound:
         pip_dist = None
 
-    if pip_dist:
-        if parse_version(pip_dist.version) < parse_version('1.4'):
-            raise RuntimeError(VERSION_MSG)
+    if pip_dist and parse_version(pip_dist.version) < parse_version('1.4'):
+        raise RuntimeError(VERSION_MSG)
 
 twisted_ver = ">= 18.7.0"
 autobahn_ver = ">= 0.16.0"
@@ -496,18 +496,17 @@ bundle_version = version.split("-")[0]
 # dependencies
 setup_args['install_requires'] = [
     'setuptools >= 8.0',
-    'Twisted ' + twisted_ver,
+    f'Twisted {twisted_ver}',
     'Jinja2 >= 2.1',
     'msgpack >= 0.6.0',
-    # required for tests, but Twisted requires this anyway
     'zope.interface >= 4.1.1',
     'sqlalchemy >= 1.3.0, < 1.5',
     'alembic >= 1.6.0',
     'python-dateutil>=1.5',
-    'txaio ' + txaio_ver,
-    'autobahn ' + autobahn_ver,
+    f'txaio {txaio_ver}',
+    f'autobahn {autobahn_ver}',
     'PyJWT',
-    'pyyaml'
+    'pyyaml',
 ]
 
 # buildbot_windows_service needs pywin32
@@ -545,7 +544,8 @@ setup_args['extras_require'] = {
         'pylint<1.7.0',
         'pyenchant',
         'flake8~=3.9.2',
-    ] + test_deps,
+    ]
+    + test_deps,
     'bundle': [
         f"buildbot-www=={bundle_version}",
         f"buildbot-worker=={bundle_version}",
@@ -554,10 +554,7 @@ setup_args['extras_require'] = {
         f"buildbot-grid-view=={bundle_version}",
     ],
     'tls': [
-        'Twisted[tls] ' + twisted_ver,
-        # There are bugs with extras inside extras:
-        # <https://github.com/pypa/pip/issues/3516>
-        # so we explicitly include Twisted[tls] dependencies.
+        f'Twisted[tls] {twisted_ver}',
         'pyopenssl >= 16.0.0',
         'service_identity',
         'idna >= 0.6',

@@ -13,9 +13,7 @@ for fn in sys.argv[1:]:
 
     def getIndent(i):
         res = spaces.match(lines[i])
-        if res is None:
-            return 0
-        return len(res.group(0))
+        return 0 if res is None else len(res.group(0))
 
     def IndentBlock(i, numspaces):
         initIndent = getIndent(i)

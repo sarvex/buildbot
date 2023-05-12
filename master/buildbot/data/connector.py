@@ -99,8 +99,7 @@ class DataConnector(service.AsyncService):
                         if pp == ('',):
                             pp = ()
                         self.matcher[pp] = ep
-                    rootLinkName = clsdict.get('rootLinkName')
-                    if rootLinkName:
+                    if rootLinkName := clsdict.get('rootLinkName'):
                         self.rootLinks.append({'name': rootLinkName})
 
     def _setup(self):
@@ -164,13 +163,15 @@ class DataConnector(service.AsyncService):
     def allEndpoints(self):
         """return the full spec of the connector as a list of dicts
         """
-        paths = []
-        for k, v in sorted(self.matcher.iterPatterns()):
-            paths.append(dict(path="/".join(k),
-                              plural=str(v.rtype.plural),
-                              type=str(v.rtype.entityType.name),
-                              type_spec=v.rtype.entityType.getSpec()))
-        return paths
+        return [
+            dict(
+                path="/".join(k),
+                plural=str(v.rtype.plural),
+                type=str(v.rtype.entityType.name),
+                type_spec=v.rtype.entityType.getSpec(),
+            )
+            for k, v in sorted(self.matcher.iterPatterns())
+        ]
 
     def resultspec_from_jsonapi(self, req_args, entityType, is_collection):
 
@@ -257,8 +258,7 @@ class DataConnector(service.AsyncService):
                                       order=order, filters=filters, properties=properties)
 
         # for singular endpoints, only allow fields
-        if not is_collection:
-            if rspec.filters:
-                raise exceptions.InvalidQueryParameter("this is not a collection")
+        if not is_collection and rspec.filters:
+            raise exceptions.InvalidQueryParameter("this is not a collection")
 
         return rspec

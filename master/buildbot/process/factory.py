@@ -231,9 +231,7 @@ class BasicBuildFactory(GNUAutoconf):
         if configureEnv is None:
             configureEnv = {}
         mode = "full"
-        method = "clobber"
-        if cvsCopy:
-            method = "copy"
+        method = "copy" if cvsCopy else "clobber"
         source = CVS(
             cvsroot=cvsroot, cvsmodule=cvsmodule, mode=mode, method=method)
         super().__init__(source,

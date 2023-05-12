@@ -274,8 +274,7 @@ class GitPoller(base.ReconfigurablePollingChangeSource, StateMixin, GitMixin):
 
     def _get_commit_comments(self, rev):
         args = ['--no-walk', r'--format=%s%n%b', rev, '--']
-        d = self._dovccmd('log', args, path=self.workdir)
-        return d
+        return self._dovccmd('log', args, path=self.workdir)
 
     def _get_commit_timestamp(self, rev):
         # unix timestamp
@@ -349,11 +348,11 @@ class GitPoller(base.ReconfigurablePollingChangeSource, StateMixin, GitMixin):
             return
 
         # get the change list
-        revListArgs = (['--ignore-missing'] +
-                       ['--format=%H', f'{newRev}'] +
-                       ['^' + rev
-                        for rev in sorted(self.lastRev.values())] +
-                       ['--'])
+        revListArgs = (
+            ['--ignore-missing']
+            + ['--format=%H', f'{newRev}']
+            + [f'^{rev}' for rev in sorted(self.lastRev.values())]
+        ) + ['--']
         self.changeCount = 0
         results = yield self._dovccmd('log', revListArgs, path=self.workdir)
 
@@ -391,9 +390,7 @@ class GitPoller(base.ReconfigurablePollingChangeSource, StateMixin, GitMixin):
 
             results = yield dl
 
-            # check for failures
-            failures = [r[1] for r in results if not r[0]]
-            if failures:
+            if failures := [r[1] for r in results if not r[0]]:
                 for failure in failures:
                     log.err(failure, f"while processing changes for {newRev} {branch}")
                 # just fail on the first error; they're probably all related!
@@ -416,9 +413,7 @@ class GitPoller(base.ReconfigurablePollingChangeSource, StateMixin, GitMixin):
             'fetch',
             'ls-remote',
         ]
-        if self.sshPrivateKey is not None and command in commandsThatNeedKey:
-            return True
-        return False
+        return self.sshPrivateKey is not None and command in commandsThatNeedKey
 
     def _downloadSshPrivateKey(self, keyPath):
         # We change the permissions of the key file to be user-readable only so

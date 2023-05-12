@@ -236,9 +236,7 @@ class Mercurial(Source):
         if abandonOnFailure and cmd.didFail():
             log.msg(f"Source step failed while running command {cmd}")
             raise buildstep.BuildStepFailed()
-        if collectStdout:
-            return cmd.stdout
-        return cmd.rc
+        return cmd.stdout if collectStdout else cmd.rc
 
     def computeSourceRevision(self, changes):
         if not changes:
@@ -265,7 +263,7 @@ class Mercurial(Source):
             return self.method
         elif self.mode == 'incremental':
             return None
-        elif self.method is None and self.mode == 'full':
+        elif self.mode == 'full':
             return 'fresh'
         return None
 
@@ -279,7 +277,7 @@ class Mercurial(Source):
 
         files = []
         for filename in stdout.splitlines():
-            filename = self.workdir + '/' + filename
+            filename = f'{self.workdir}/{filename}'
             files.append(filename)
         if files:
             if self.workerVersionIsOlderThan('rmdir', '2.14'):
@@ -314,10 +312,7 @@ class Mercurial(Source):
         yield self._dovccmd(command)
 
     def _clone(self):
-        if self.retry:
-            abandonOnFailure = (self.retry[1] <= 0)
-        else:
-            abandonOnFailure = True
+        abandonOnFailure = (self.retry[1] <= 0) if self.retry else True
         d = self._dovccmd(['clone', '--noupdate', self.repourl, '.'],
                           abandonOnFailure=abandonOnFailure)
 
@@ -348,6 +343,7 @@ class Mercurial(Source):
         return d
 
     def applyPatch(self, patch):
-        d = self._dovccmd(['import', '--no-commit', '-p', str(patch[0]), '-'],
-                          initialStdin=patch[1])
-        return d
+        return self._dovccmd(
+            ['import', '--no-commit', '-p', str(patch[0]), '-'],
+            initialStdin=patch[1],
+        )

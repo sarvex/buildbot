@@ -48,7 +48,7 @@ class BaseScheduler(ClusteredBuildbotService, StateMixin):
         elif isinstance(builderNames, (list, tuple)):
             for b in builderNames:
                 if not isinstance(b, str) and \
-                        not interfaces.IRenderable.providedBy(b):
+                            not interfaces.IRenderable.providedBy(b):
                     ok = False
         else:
             ok = False
@@ -67,26 +67,24 @@ class BaseScheduler(ClusteredBuildbotService, StateMixin):
         self.properties.setProperty("scheduler", name, "Scheduler")
         self.objectid = None
 
-        # Set the codebases that are necessary to process the changes
-        # These codebases will always result in a sourcestamp with or without
-        # changes
-        known_keys = set(['branch', 'repository', 'revision'])
         if codebases is None:
             config.error("Codebases cannot be None")
         elif isinstance(codebases, list):
-            codebases = dict((codebase, {}) for codebase in codebases)
+            codebases = {codebase: {} for codebase in codebases}
         elif not isinstance(codebases, dict):
             config.error(
                 "Codebases must be a dict of dicts, or list of strings")
         else:
+                # Set the codebases that are necessary to process the changes
+                # These codebases will always result in a sourcestamp with or without
+                # changes
+            known_keys = {'branch', 'repository', 'revision'}
             for codebase, attrs in codebases.items():
                 if not isinstance(attrs, dict):
                     config.error("Codebases must be a dict of dicts")
-                else:
-                    unk = set(attrs) - known_keys
-                    if unk:
-                        config.error(f"Unknown codebase keys {', '.join(unk)} "
-                                     f"for codebase {codebase}")
+                elif unk := set(attrs) - known_keys:
+                    config.error(f"Unknown codebase keys {', '.join(unk)} "
+                                 f"for codebase {codebase}")
 
         self.codebases = codebases
 
@@ -211,7 +209,7 @@ class BaseScheduler(ClusteredBuildbotService, StateMixin):
             # events will now emit proper branch instead of refs/heads/<branch>. Below we detect
             # whether this breaks change filters.
             change_filter_may_be_broken = \
-                change.category == 'ref-updated' and not change.branch.startswith('refs/')
+                    change.category == 'ref-updated' and not change.branch.startswith('refs/')
 
             if change_filter_may_be_broken:
                 old_change = copy.deepcopy(change)
@@ -222,9 +220,11 @@ class BaseScheduler(ClusteredBuildbotService, StateMixin):
 
                 def has_deprecated_ref_branch_filter():
                     for filter in change_filter.filters:
-                        if filter.prop == 'branch':
-                            if 'refs/heads/' in filter.describe():
-                                return True
+                        if (
+                            filter.prop == 'branch'
+                            and 'refs/heads/' in filter.describe()
+                        ):
+                            return True
 
                     return False
 
@@ -310,7 +310,7 @@ class BaseScheduler(ClusteredBuildbotService, StateMixin):
             }
             # apply info from passed sourcestamps onto the configured default
             # sourcestamp attributes for this codebase.
-            ss.update(stampsByCodebase.get(codebase, {}))
+            ss |= stampsByCodebase.get(codebase, {})
             stampsWithDefaults.append(ss)
 
         # fill in any supplied sourcestamps that aren't for a codebase in the
@@ -326,11 +326,16 @@ class BaseScheduler(ClusteredBuildbotService, StateMixin):
             }
             stampsWithDefaults.append(ss)
 
-        rv = yield self.addBuildsetForSourceStamps(
-            sourcestamps=stampsWithDefaults, reason=reason,
-            waited_for=waited_for, properties=properties,
-            builderNames=builderNames, **kw)
-        return rv
+        return (
+            yield self.addBuildsetForSourceStamps(
+                sourcestamps=stampsWithDefaults,
+                reason=reason,
+                waited_for=waited_for,
+                properties=properties,
+                builderNames=builderNames,
+                **kw
+            )
+        )
 
     def getCodebaseDict(self, codebase):
         # Hook for subclasses to change codebase parameters when a codebase does
@@ -424,16 +429,11 @@ class BaseScheduler(ClusteredBuildbotService, StateMixin):
         # dynamically get the builder list to schedule
         builderNames = yield properties.render(builderNames)
 
-        # Get the builder ids
-        # Note that there is a data.updates.findBuilderId(name)
-        # but that would merely only optimize the single builder case, while
-        # probably the multiple builder case will be severely impacted by the
-        # several db requests needed.
-        builderids = []
-        for bldr in (yield self.master.data.get(('builders', ))):
-            if bldr['name'] in builderNames:
-                builderids.append(bldr['builderid'])
-
+        builderids = [
+            bldr['builderid']
+            for bldr in (yield self.master.data.get(('builders',)))
+            if bldr['name'] in builderNames
+        ]
         # translate properties object into a dict as required by the
         # addBuildset method
         properties_dict = yield properties.render(properties.asDict())

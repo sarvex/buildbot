@@ -30,7 +30,7 @@ def _loadConfig(basedir, configFile, quiet):
         if not quiet:
             print("Configuration Errors:", file=sys.stderr)
             for e in e.errors:
-                print("  " + e, file=sys.stderr)
+                print(f"  {e}", file=sys.stderr)
         return 1
 
     if not quiet:

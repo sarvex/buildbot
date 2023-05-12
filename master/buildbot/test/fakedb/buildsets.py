@@ -110,12 +110,15 @@ class FakeBuildsetsComponent(FakeDBComponent):
             submitted_at = int(self.reactor.seconds())
 
         bsid = self._newBsid()
-        br_rows = []
-        for builderid in builderids:
-            br_rows.append(
-                BuildRequest(buildsetid=bsid, builderid=builderid, waited_for=waited_for,
-                             submitted_at=submitted_at))
-
+        br_rows = [
+            BuildRequest(
+                buildsetid=bsid,
+                builderid=builderid,
+                waited_for=waited_for,
+                submitted_at=submitted_at,
+            )
+            for builderid in builderids
+        ]
         self.db.buildrequests.insertTestData(br_rows)
 
         # make up a row and keep its dictionary, with the properties tacked on
@@ -160,12 +163,9 @@ class FakeBuildsetsComponent(FakeDBComponent):
     def getBuildsets(self, complete=None, resultSpec=None):
         rv = []
         for bs in self.buildsets.values():
-            if complete is not None:
-                if complete and bs['complete']:
-                    rv.append(bs)
-                elif not complete and not bs['complete']:
-                    rv.append(bs)
-            else:
+            if complete is None:
+                rv.append(bs)
+            elif complete and bs['complete'] or not complete and not bs['complete']:
                 rv.append(bs)
         if resultSpec is not None:
             rv = self.applyResultSpec(rv, resultSpec)
@@ -180,8 +180,8 @@ class FakeBuildsetsComponent(FakeDBComponent):
             return []
         rv = []
         for bs in (yield self.getBuildsets(complete=complete)):
+            ok = True
             if branch or repository:
-                ok = True
                 if not bs['sourcestamps']:
                     # no sourcestamps -> no match
                     ok = False
@@ -191,9 +191,6 @@ class FakeBuildsetsComponent(FakeDBComponent):
                         ok = False
                     if repository and ss['repository'] != repository:
                         ok = False
-            else:
-                ok = True
-
             if ok:
                 rv.append(bs)
 

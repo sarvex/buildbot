@@ -242,9 +242,7 @@ class LogsConnectorComponent(base.DBConnectorComponent):
 
         # then find the beginning of the next line
         i = content.find(b'\n', self.MAX_CHUNK_SIZE)
-        if i == -1:
-            return truncline, None
-        return truncline, content[i + 1:]
+        return (truncline, None) if i == -1 else (truncline, content[i + 1:])
 
     # returns a Deferred that returns None
     def finishLog(self, logid):

@@ -118,10 +118,8 @@ class HTTPClientService(service.SharedService):
 
     def _doRequest(self, method, ep, params=None, headers=None, data=None, json=None, files=None,
             timeout=None):
-        if ep.startswith('http://') or ep.startswith('https://'):
-            pass
-        else:
-            assert ep == "" or ep.startswith("/"), "ep should start with /: " + ep
+        if not ep.startswith('http://') and not ep.startswith('https://'):
+            assert ep == "" or ep.startswith("/"), f"ep should start with /: {ep}"
 
         if not self.quiet:
             log.debug("{method} {ep} {params!r} <- {data!r}",
@@ -130,7 +128,7 @@ class HTTPClientService(service.SharedService):
             # ensure that the json is really jsonable
             jsonmodule.dumps(json, default=toJson)
         if files is not None:
-            files = dict((k, v.read()) for (k, v) in files.items())
+            files = {k: v.read() for (k, v) in files.items()}
         if not self._expected:
             raise AssertionError(
                 f"Not expecting a request, while we got: method={method!r}, ep={ep!r}, "

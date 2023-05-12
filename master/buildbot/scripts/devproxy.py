@@ -44,11 +44,7 @@ class DevProxy:
                 auth_cookie = cookies["TWISTED_SESSION"]
             cookies = {'TWISTED_SESSION': auth_cookie}
         logging.basicConfig(level=logging.DEBUG)
-        if plugins is None:
-            plugins = {}
-        else:
-            plugins = json.loads(plugins)
-
+        plugins = {} if plugins is None else json.loads(plugins)
         self.plugins = plugins
 
         app.router.add_route('*', '/ws', self.ws_handler)
@@ -58,7 +54,7 @@ class DevProxy:
         for plugin in self.apps.names:
             if plugin != 'base':
                 staticdir = self.apps.get(plugin).static_dir
-                app.router.add_static('/' + plugin, staticdir)
+                app.router.add_static(f'/{plugin}', staticdir)
         staticdir = self.staticdir = self.apps.get('base').static_dir
         loader = jinja2.FileSystemLoader(staticdir)
         self.jinja = jinja2.Environment(
@@ -77,7 +73,7 @@ class DevProxy:
         try:
             await self.fetch_config_from_upstream()
         except aiohttp.ClientConnectionError as e:
-            raise RuntimeError("Unable to connect to buildbot master" + str(e)) from e
+            raise RuntimeError(f"Unable to connect to buildbot master{str(e)}") from e
 
     async def on_cleanup(self, app):
         await self.session.close()
@@ -87,9 +83,7 @@ class DevProxy:
         ws_server = aiohttp.web.WebSocketResponse()
         await ws_server.prepare(req)
 
-        async with self.session.ws_connect(
-            self.next_url + "/ws", headers=req.headers
-        ) as ws_client:
+        async with self.session.ws_connect(f"{self.next_url}/ws", headers=req.headers) as ws_client:
 
             async def ws_forward(ws_from, ws_to):
                 async for msg in ws_from:
@@ -150,7 +144,7 @@ class DevProxy:
         async with self.session.get(self.next_url) as request:
             index = await request.content.read()
             if request.status != 200:
-                raise RuntimeError("Unable to fetch buildbot config: " + index.decode())
+                raise RuntimeError(f"Unable to fetch buildbot config: {index.decode()}")
         # hack to parse the configjson from upstream buildbot config
         start_delimiter = b'angular.module("buildbot_config", []).constant("config", '
         start_index = index.index(start_delimiter)
@@ -169,7 +163,7 @@ class DevProxy:
             self.config['plugins'][k] = v
 
         self.config['buildbotURL'] = self.buildbotURL
-        self.config['buildbotURLs'] = [self.buildbotURL, self.next_url + "/"]
+        self.config['buildbotURLs'] = [self.buildbotURL, f"{self.next_url}/"]
 
     async def index_handler(self, req):
         tpl = self.jinja.get_template('index.html')

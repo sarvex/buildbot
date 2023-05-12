@@ -86,22 +86,14 @@ class CVS(Source):
     @defer.inlineCallbacks
     def mode_incremental(self):
         updatable = yield self._sourcedirIsUpdatable()
-        if updatable:
-            rv = yield self.doUpdate()
-        else:
-            rv = yield self.clobber()
-        return rv
+        return (yield self.doUpdate()) if updatable else (yield self.clobber())
 
     @defer.inlineCallbacks
     def mode_full(self):
         if self.method == 'clobber':
-            rv = yield self.clobber()
-            return rv
-
+            return (yield self.clobber())
         elif self.method == 'copy':
-            rv = yield self.copy()
-            return rv
-
+            return (yield self.copy())
         updatable = yield self._sourcedirIsUpdatable()
         if not updatable:
             log.msg("CVS repo not present, making full checkout")
@@ -128,20 +120,17 @@ class CVS(Source):
     @defer.inlineCallbacks
     def clobber(self):
         yield self._clobber()
-        res = yield self.doCheckout(self.workdir)
-        return res
+        return (yield self.doCheckout(self.workdir))
 
     @defer.inlineCallbacks
     def fresh(self, ):
         yield self.purge(True)
-        res = yield self.doUpdate()
-        return res
+        return (yield self.doUpdate())
 
     @defer.inlineCallbacks
     def clean(self, ):
         yield self.purge(False)
-        res = yield self.doUpdate()
-        return res
+        return (yield self.doUpdate())
 
     @defer.inlineCallbacks
     def copy(self):
@@ -190,10 +179,7 @@ class CVS(Source):
         if self.revision:
             command += ['-D', self.revision]
         command += [self.cvsmodule]
-        if self.retry:
-            abandonOnFailure = (self.retry[1] <= 0)
-        else:
-            abandonOnFailure = True
+        abandonOnFailure = (self.retry[1] <= 0) if self.retry else True
         res = yield self._dovccmd(command, '', abandonOnFailure=abandonOnFailure)
 
         if self.retry:
@@ -221,8 +207,7 @@ class CVS(Source):
             command += ['-r', self.branch]
         if self.revision:
             command += ['-D', self.revision]
-        res = yield self._dovccmd(command)
-        return res
+        return (yield self._dovccmd(command))
 
     @defer.inlineCallbacks
     def checkLogin(self):
@@ -313,10 +298,7 @@ class CVS(Source):
         yield self.runCommand(cmd)
         if cmd.rc is not None and cmd.rc != 0:
             return False
-        if self._cvsEntriesContainStickyDates(myFileWriter.buffer):
-            return False
-
-        return True
+        return not self._cvsEntriesContainStickyDates(myFileWriter.buffer)
 
     def parseGotRevision(self):
         revision = time.strftime("%Y-%m-%d %H:%M:%S +0000", time.gmtime())
@@ -332,7 +314,7 @@ class CVS(Source):
             return self.method
         elif self.mode == 'incremental':
             return None
-        elif self.method is None and self.mode == 'full':
+        elif self.mode == 'full':
             return 'fresh'
         return None
 

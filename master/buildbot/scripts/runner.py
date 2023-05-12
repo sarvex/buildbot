@@ -505,7 +505,7 @@ class CheckConfigOptions(base.SubcommandOptions):
             "'buildbot.tac' from the current directory will be used"
 
     def parseArgs(self, *args):
-        if len(args) >= 1:
+        if args:
             self['configFile'] = args[0]
 
 
@@ -563,7 +563,6 @@ class UserOptions(base.SubcommandOptions):
 
         if len(info_list) == 1 and '=' not in info_list[0]:
             info_elem["identifier"] = info_list[0]
-            self['info'].append(info_elem)
         else:
             for info_item in info_list:
                 split_info = info_item.split("=", 1)
@@ -575,7 +574,8 @@ class UserOptions(base.SubcommandOptions):
                     split_info[0] = split_id[1]
 
                 info_elem[split_info[0]] = split_info[1]
-            self['info'].append(info_elem)
+
+        self['info'].append(info_elem)
 
     def getSynopsis(self):
         return "Usage:    buildbot user [options]"
@@ -638,10 +638,9 @@ class UserOptions(base.SubcommandOptions):
                     if 'identifier' in user:
                         raise usage.UsageError("identifier found in add info, "
                                                "use: --info=type=value,type=value,..")
-        if op in ('remove', 'get'):
-            if info:
-                raise usage.UsageError("cannot use --info with 'remove' "
-                                       "or 'get'")
+        if op in ('remove', 'get') and info:
+            raise usage.UsageError("cannot use --info with 'remove' "
+                                   "or 'get'")
 
 
 class DataSpecOption(base.BasedirMixin, base.SubcommandOptions):
@@ -782,7 +781,7 @@ def run():
         print()
 
         c = getattr(config, 'subOptions', config)
-        print(str(c))
+        print(c)
         sys.exit(1)
 
     subconfig = config.subOptions

@@ -157,9 +157,8 @@ class BuildsetsConnectorComponent(base.DBConnectorComponent):
             q = bs_tbl.select(whereclause=(bs_tbl.c.id == bsid))
             res = conn.execute(q)
             row = res.fetchone()
-            if not row:
-                return None
-            return self._thd_row2dict(conn, row)
+            return None if not row else self._thd_row2dict(conn, row)
+
         return self.db.pool.do(thd)
 
     @defer.inlineCallbacks

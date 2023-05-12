@@ -38,16 +38,18 @@ class WorkerReconnectPb(RunMasterBase):
 
     @defer.inlineCallbacks
     def setup_config(self):
-        c = {}
         from buildbot.config import BuilderConfig
         from buildbot.process.factory import BuildFactory
         from buildbot.plugins import schedulers
 
-        c['schedulers'] = [
-            schedulers.AnyBranchScheduler(name="sched", builderNames=["testy"]),
-            schedulers.ForceScheduler(name="force", builderNames=["testy"])
-        ]
-
+        c = {
+            'schedulers': [
+                schedulers.AnyBranchScheduler(
+                    name="sched", builderNames=["testy"]
+                ),
+                schedulers.ForceScheduler(name="force", builderNames=["testy"]),
+            ]
+        }
         f = BuildFactory()
         f.addStep(DisconnectingStep())
         c['builders'] = [

@@ -59,9 +59,8 @@ class Row:
             raise Exception('Row.__init__ must be overridden to supply default values for columns')
 
         self.values = kwargs.copy()
-        if self.id_column:
-            if self.values[self.id_column] is None:
-                self.values[self.id_column] = self.nextId()
+        if self.id_column and self.values[self.id_column] is None:
+            self.values[self.id_column] = self.nextId()
         for col in self.required_columns:
             assert col in kwargs, f"{col} not specified: {kwargs}"
         for col in self.lists:
@@ -154,12 +153,11 @@ class Row:
             stepid=db.steps.getStep,
             masterid=db.masters.getMaster)
         for foreign_key in self.foreignKeys:
-            if foreign_key in accessors:
-                key = getattr(self, foreign_key)
-                if key is not None:
-                    val = yield accessors[foreign_key](key)
-                    t.assertTrue(val is not None,
-                                 f"foreign key {foreign_key}:{repr(key)} does not exit")
-            else:
+            if foreign_key not in accessors:
                 raise ValueError(
                     "warning, unsupported foreign key", foreign_key, self.table)
+            key = getattr(self, foreign_key)
+            if key is not None:
+                val = yield accessors[foreign_key](key)
+                t.assertTrue(val is not None,
+                             f"foreign key {foreign_key}:{repr(key)} does not exit")

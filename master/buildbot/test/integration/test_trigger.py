@@ -53,19 +53,18 @@ class TriggeringMaster(RunMasterBase):
 
     @defer.inlineCallbacks
     def setup_config(self, addFailure=False):
-        c = {}
         from buildbot.config import BuilderConfig
         from buildbot.process.factory import BuildFactory
         from buildbot.plugins import steps, schedulers
 
-        c['schedulers'] = [
-            schedulers.Triggerable(
-                name="trigsched",
-                builderNames=["build"]),
-            schedulers.AnyBranchScheduler(
-                name="sched",
-                builderNames=["testy"])]
-
+        c = {
+            'schedulers': [
+                schedulers.Triggerable(name="trigsched", builderNames=["build"]),
+                schedulers.AnyBranchScheduler(
+                    name="sched", builderNames=["testy"]
+                ),
+            ]
+        }
         f = BuildFactory()
         f.addStep(steps.ShellCommand(command='echo hello'))
         f.addStep(steps.Trigger(schedulerNames=['trigsched'],

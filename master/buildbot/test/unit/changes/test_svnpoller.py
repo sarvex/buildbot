@@ -226,14 +226,15 @@ sample_info_output = b"""\
 def make_changes_output(maxrevision):
     # return what 'svn log' would have just after the given revision was
     # committed
-    logs = sample_logentries[0:maxrevision]
+    logs = sample_logentries[:maxrevision]
     assert len(logs) == maxrevision
     logs.reverse()
-    output = (b"""<?xml version="1.0"?>
+    return (
+        b"""<?xml version="1.0"?>
 <log>"""
-              + b"".join(logs)
-              + b"</log>")
-    return output
+        + b"".join(logs)
+        + b"</log>"
+    )
 
 
 def make_logentry_elements(maxrevision):
@@ -286,7 +287,7 @@ class TestSVNPoller(MasterRunProcessMixin,
     @defer.inlineCallbacks
     def test_strip_repourl(self):
         base = "svn+ssh://svn.twistedmatrix.com/svn/Twisted/trunk"
-        s = yield self.attachSVNPoller(base + "/")
+        s = yield self.attachSVNPoller(f"{base}/")
         self.assertEqual(s.repourl, base)
 
     @defer.inlineCallbacks
@@ -411,14 +412,14 @@ class TestSVNPoller(MasterRunProcessMixin,
         args = ['svn', 'info', '--xml', '--non-interactive', sample_base,
                 '--username=dustin']
         if password is not None:
-            args.append('--password=' + password)
+            args.append(f'--password={password}')
         return ExpectMasterShell(args)
 
     def makeLogExpect(self, password='bbrocks'):
         args = ['svn', 'log', '--xml', '--verbose', '--non-interactive',
                 '--username=dustin']
         if password is not None:
-            args.append('--password=' + password)
+            args.append(f'--password={password}')
         args.extend(['--limit=100', sample_base])
         return ExpectMasterShell(args)
 

@@ -27,8 +27,9 @@ class InterruptCommand(RunMasterBase):
 
     @defer.inlineCallbacks
     def setup_config(self):
-        c = {}
         from buildbot.plugins import schedulers, steps, util
+
+
 
         class SleepAndInterrupt(steps.ShellSequence):
             @defer.inlineCallbacks
@@ -40,14 +41,14 @@ class InterruptCommand(RunMasterBase):
                 d = self.runShellSequence([util.ShellArg(sleep)])
                 yield asyncSleep(1)
                 self.interrupt("just testing")
-                res = yield d
-                return res
+                return (yield d)
 
-        c['schedulers'] = [
-            schedulers.ForceScheduler(
-                name="force",
-                builderNames=["testy"])]
 
+        c = {
+            'schedulers': [
+                schedulers.ForceScheduler(name="force", builderNames=["testy"])
+            ]
+        }
         f = util.BuildFactory()
         f.addStep(SleepAndInterrupt())
         c['builders'] = [

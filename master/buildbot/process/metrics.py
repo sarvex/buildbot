@@ -167,11 +167,7 @@ class AveragingFiniteList(FiniteList):
         self._calc()
 
     def _calc(self):
-        if not self:
-            self.average = 0
-        else:
-            self.average = float(sum(self)) / len(self)
-
+        self.average = 0 if not self else float(sum(self)) / len(self)
         return self.average
 
 
@@ -228,15 +224,14 @@ class MetricCountHandler(MetricHandler):
         return self._counters[counter]
 
     def report(self):
-        retval = []
-        for counter in sorted(self.keys()):
-            retval.append(f"Counter {counter}: {self.get(counter)}")
+        retval = [
+            f"Counter {counter}: {self.get(counter)}"
+            for counter in sorted(self.keys())
+        ]
         return "\n".join(retval)
 
     def asDict(self):
-        retval = {}
-        for counter in sorted(self.keys()):
-            retval[counter] = self.get(counter)
+        retval = {counter: self.get(counter) for counter in sorted(self.keys())}
         return dict(counters=retval)
 
 
@@ -256,15 +251,14 @@ class MetricTimeHandler(MetricHandler):
         return self._timers[timer].average
 
     def report(self):
-        retval = []
-        for timer in sorted(self.keys()):
-            retval.append(f"Timer {timer}: {self.get(timer):.3g}")
+        retval = [
+            f"Timer {timer}: {self.get(timer):.3g}"
+            for timer in sorted(self.keys())
+        ]
         return "\n".join(retval)
 
     def asDict(self):
-        retval = {}
-        for timer in sorted(self.keys()):
-            retval[timer] = self.get(timer)
+        retval = {timer: self.get(timer) for timer in sorted(self.keys())}
         return dict(timers=retval)
 
 
@@ -287,9 +281,10 @@ class MetricAlarmHandler(MetricHandler):
         return "\n".join(retval)
 
     def asDict(self):
-        retval = {}
-        for alarm, (level, msg) in sorted(self._alarms.items()):
-            retval[alarm] = (ALARM_TEXT[level], msg)
+        retval = {
+            alarm: (ALARM_TEXT[level], msg)
+            for alarm, (level, msg) in sorted(self._alarms.items())
+        }
         return dict(alarms=retval)
 
 
@@ -313,11 +308,7 @@ class AttachedWorkersWatcher:
 
         # We let these be off by one since they're counted at slightly
         # different times
-        if abs(botmaster_count - worker_count) > 1:
-            level = ALARM_WARN
-        else:
-            level = ALARM_OK
-
+        level = ALARM_WARN if abs(botmaster_count - worker_count) > 1 else ALARM_OK
         MetricAlarmEvent.log('attached_workers', msg=f'{botmaster_count} {worker_count}',
                              level=level)
 
@@ -337,10 +328,7 @@ def periodicCheck(_reactor=reactor):
         # Measure how much garbage we have
         garbage_count = len(gc.garbage)
         MetricCountEvent.log('gc.garbage', garbage_count, absolute=True)
-        if garbage_count == 0:
-            level = ALARM_OK
-        else:
-            level = ALARM_WARN
+        level = ALARM_OK if garbage_count == 0 else ALARM_WARN
         MetricAlarmEvent.log('gc.garbage', level=level)
 
         if resource:
@@ -366,6 +354,7 @@ def periodicCheck(_reactor=reactor):
             now = util.now(_reactor)
             delay = (now - then) - dt
             MetricTimeEvent.log("reactorDelay", delay)
+
         _reactor.callLater(dt, cb)
     except Exception:
         log.err(None, "while collecting VM metrics")
@@ -481,7 +470,7 @@ class MetricLogObserver(util_service.ReconfigurableServiceMixin,
     def asDict(self):
         retval = {}
         for _, handler in self.handlers.items():
-            retval.update(handler.asDict())
+            retval |= handler.asDict()
         return retval
 
     def report(self):

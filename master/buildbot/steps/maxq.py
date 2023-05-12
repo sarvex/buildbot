@@ -53,9 +53,7 @@ class MaxQ(buildstep.ShellMixin, buildstep.BuildStep):
 
     @defer.inlineCallbacks
     def run(self):
-        command = [self.binary]
-        command.append(self.testdir)
-
+        command = [self.binary, self.testdir]
         cmd = yield self.makeRemoteShellCommand(command=command)
         yield self.runCommand(cmd)
 
@@ -68,9 +66,7 @@ class MaxQ(buildstep.ShellMixin, buildstep.BuildStep):
         # detected
         if not self.failures and cmd.didFail():
             self.failures = 1
-        if self.failures:
-            return FAILURE
-        return SUCCESS
+        return FAILURE if self.failures else SUCCESS
 
     def getResultSummary(self):
         if self.failures:

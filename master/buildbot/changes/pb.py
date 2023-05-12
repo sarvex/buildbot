@@ -119,7 +119,7 @@ class PBChangeSource(base.ChangeSource):
 
     def describe(self):
         portname = self.registered_port
-        d = "PBChangeSource listener on " + str(portname)
+        d = f"PBChangeSource listener on {str(portname)}"
         if self.prefix is not None:
             d += f" (prefix '{self.prefix}')"
         return d

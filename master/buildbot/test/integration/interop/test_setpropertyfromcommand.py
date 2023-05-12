@@ -27,14 +27,13 @@ class SetPropertyFromCommand(RunMasterBase):
 
     @defer.inlineCallbacks
     def setup_config(self):
-        c = {}
         from buildbot.plugins import schedulers, steps, util
 
-        c['schedulers'] = [
-            schedulers.ForceScheduler(
-                name="force",
-                builderNames=["testy"])]
-
+        c = {
+            'schedulers': [
+                schedulers.ForceScheduler(name="force", builderNames=["testy"])
+            ]
+        }
         f = util.BuildFactory()
         f.addStep(steps.SetPropertyFromCommand(
             property="test", command=["echo", "foo"]))

@@ -33,16 +33,18 @@ class WampMQ(service.ReconfigurableServiceMixin, base.MQBase):
     def produce(self, routingKey, data):
         d = self._produce(routingKey, data)
         d.addErrback(
-            log.err, "Problem while producing message on topic " + repr(routingKey))
+            log.err, f"Problem while producing message on topic {repr(routingKey)}"
+        )
 
     @classmethod
     def messageTopic(cls, routingKey):
         def ifNone(v, default):
             return default if v is None else v
+
         # replace None values by "" in routing key
         routingKey = [ifNone(key, "") for key in routingKey]
         # then join them with "dot", and add the prefix
-        return cls.NAMESPACE + "." + ".".join(routingKey)
+        return f"{cls.NAMESPACE}." + ".".join(routingKey)
 
     @classmethod
     def routingKeyFromMessageTopic(cls, topic):
@@ -78,7 +80,7 @@ class QueueRef(base.QueueRef):
     def subscribe(self, connector_service, wamp_service, _filter):
         self.filter = _filter
         self.emulated = False
-        options = dict(details_arg=str('details'))
+        options = dict(details_arg='details')
         if None in _filter:
             options["match"] = "wildcard"
         options = SubscribeOptions(**options)
@@ -107,4 +109,4 @@ class QueueRef(base.QueueRef):
             except TransportLost:
                 pass
             except Exception as e:
-                log.err(e, 'When unsubscribing MQ connection ' + str(unreg))
+                log.err(e, f'When unsubscribing MQ connection {str(unreg)}')

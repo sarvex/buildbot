@@ -95,10 +95,10 @@ class FakeWorkersComponent(FakeDBComponent):
         return defer.succeed(id)
 
     def _getWorkerByName(self, name):
-        for worker in self.workers.values():
-            if worker['name'] == name:
-                return worker
-        return None
+        return next(
+            (worker for worker in self.workers.values() if worker['name'] == name),
+            None,
+        )
 
     def getWorker(self, workerid=None, name=None, masterid=None, builderid=None):
         # get the id and the worker
@@ -128,16 +128,13 @@ class FakeWorkersComponent(FakeDBComponent):
                               if cfg['workerid'] == worker['id']]
                 pairs = [builder_masters[cfg['buildermasterid']]
                          for cfg in configured]
-                if builderid is not None and masterid is not None:
-                    if (builderid, masterid) not in pairs:
-                        continue
                 if builderid is not None:
-                    if not any(builderid == p[0] for p in pairs):
+                    if masterid is not None and (builderid, masterid) not in pairs:
                         continue
-                if masterid is not None:
-                    if not any((masterid == p[1]) for p in pairs):
+                    if all(builderid != p[0] for p in pairs):
                         continue
-                workers.append(worker)
+                if masterid is None or any((masterid == p[1]) for p in pairs):
+                    workers.append(worker)
         else:
             workers = list(self.workers.values())
 

@@ -42,23 +42,23 @@ class KubeClientService(fakehttpclientservice.HTTPClientService):
             'metadata': copy.copy(spec['metadata']),
             'spec': copy.deepcopy(spec['spec'])
         }
-        self.pods[namespace + '/' + name] = pod
+        self.pods[f'{namespace}/{name}'] = pod
         return pod
 
     def deletePod(self, namespace, name, graceperiod=0):
-        if namespace + '/' + name not in self.pods:
+        if f'{namespace}/{name}' not in self.pods:
             raise KubeError({
                 'message': 'Pod not found',
                 'reason': 'NotFound'})
 
-        spec = self.pods[namespace + '/' + name]
+        spec = self.pods[f'{namespace}/{name}']
 
-        del self.pods[namespace + '/' + name]
+        del self.pods[f'{namespace}/{name}']
         spec['metadata']['deletionTimestamp'] = time.ctime(time.time())
         return spec
 
     def waitForPodDeletion(self, namespace, name, timeout):
-        if namespace + '/' + name in self.pods:
+        if f'{namespace}/{name}' in self.pods:
             raise TimeoutError(f"Did not see pod {name} terminate after {timeout}s")
         return {
             'kind': 'Status',

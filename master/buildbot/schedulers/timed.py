@@ -161,9 +161,7 @@ class Timed(AbsoluteSourceStampsMixin, base.BaseScheduler):
         if last_only_if_changed != self.onlyIfChanged:
             yield self.setState('last_only_if_changed', self.onlyIfChanged)
 
-        changeids = sorted(classifications.keys())
-
-        if changeids:
+        if changeids := sorted(classifications.keys()):
             max_changeid = changeids[-1]  # (changeids are sorted)
             yield self.addBuildsetForChanges(reason=self.reason,
                                              changeids=changeids)
@@ -399,18 +397,14 @@ class NightlyTriggerable(NightlyBase):
         """Trigger this scheduler with the given sourcestamp ID. Returns a
         deferred that will fire when the buildset is finished."""
         assert isinstance(sourcestamps, list), \
-            "trigger requires a list of sourcestamps"
+                "trigger requires a list of sourcestamps"
 
         self._lastTrigger = (sourcestamps,
                              set_props,
                              parent_buildid,
                              parent_relationship)
 
-        if set_props:
-            propsDict = set_props.asDict()
-        else:
-            propsDict = {}
-
+        propsDict = set_props.asDict() if set_props else {}
         # record the trigger in the db
         d = self.setState('lastTrigger', (sourcestamps,
                                           propsDict,

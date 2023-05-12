@@ -64,10 +64,7 @@ class Connection:
         return self.domains.get(name, None)
 
     def lookupByID(self, ID):
-        for d in self.domains.values():
-            if d.ID == ID:
-                return d
-        return None
+        return next((d for d in self.domains.values() if d.ID == ID), None)
 
     def fake_add(self, name, libvirt_id):
         d = Domain(name, self, libvirt_id)

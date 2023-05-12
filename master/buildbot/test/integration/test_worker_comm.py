@@ -108,7 +108,7 @@ class FakeWorkerWorker(pb.Referenceable):
 
     def remote_setBuilderList(self, builder_info):
         builder_names = [n for n, dir in builder_info]
-        slbuilders = [FakeWorkerForBuilder() for n in builder_names]
+        slbuilders = [FakeWorkerForBuilder() for _ in builder_names]
         eventually(self.callWhenBuilderListSet)
         return dict(zip(builder_names, slbuilders))
 

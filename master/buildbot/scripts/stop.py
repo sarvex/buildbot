@@ -46,7 +46,7 @@ def stop(config, signame="TERM", wait=None):
             print("buildmaster not running")
         return 0
 
-    signum = getattr(signal, "SIG" + signame)
+    signum = getattr(signal, f"SIG{signame}")
     try:
         os.kill(pid, signum)
     except OSError as e:

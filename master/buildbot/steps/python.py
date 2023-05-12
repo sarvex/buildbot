@@ -73,9 +73,7 @@ class BuildEPYDoc(buildstep.ShellMixin, buildstep.BuildStep):
 
         if cmd.didFail():
             return FAILURE
-        if self.warnings or self.errors:
-            return WARNINGS
-        return SUCCESS
+        return WARNINGS if self.warnings or self.errors else SUCCESS
 
 
 class PyFlakes(buildstep.ShellMixin, buildstep.BuildStep):
@@ -183,9 +181,7 @@ class PyFlakes(buildstep.ShellMixin, buildstep.BuildStep):
         for m in self._flunkingIssues:
             if m in self.counts and self.counts[m] > 0:
                 return FAILURE
-        if sum(self.counts.values()) > 0:
-            return WARNINGS
-        return SUCCESS
+        return WARNINGS if sum(self.counts.values()) > 0 else SUCCESS
 
 
 class PyLint(buildstep.ShellMixin, buildstep.BuildStep):
@@ -249,24 +245,21 @@ class PyLint(buildstep.ShellMixin, buildstep.BuildStep):
 
     # returns (message type, path, line) tuple if line has been matched, or None otherwise
     def _match_line(self, line):
-        m = self._default_2_0_0_line_re.match(line)
-        if m:
+        if m := self._default_2_0_0_line_re.match(line):
             try:
                 line_int = int(m.group('line'))
             except ValueError:
                 line_int = None
             return (m.group('errtype'), m.group('path'), line_int)
 
-        m = self._parseable_line_re.match(line)
-        if m:
+        if m := self._parseable_line_re.match(line):
             try:
                 line_int = int(m.group('line'))
             except ValueError:
                 line_int = None
             return (m.group('errtype'), m.group('path'), line_int)
 
-        m = self._default_line_re.match(line)
-        if m:
+        if m := self._default_line_re.match(line):
             return (m.group('errtype'), None, None)
 
         return None
@@ -322,9 +315,7 @@ class PyLint(buildstep.ShellMixin, buildstep.BuildStep):
         for msg in self._flunkingIssues:
             if msg in self.counts and self.counts[msg] > 0:
                 return FAILURE
-        if sum(self.counts.values()) > 0:
-            return WARNINGS
-        return SUCCESS
+        return WARNINGS if sum(self.counts.values()) > 0 else SUCCESS
 
     @defer.inlineCallbacks
     def addTestResultSets(self):
@@ -404,18 +395,17 @@ class Sphinx(buildstep.ShellMixin, buildstep.BuildStep):
         while True:
             _, line = yield
             if line.startswith('build succeeded') or \
-               line.startswith('no targets are out of date.'):
+                   line.startswith('no targets are out of date.'):
                 self.success = True
             elif line.startswith('Warning, treated as error:'):
                 next_is_warning = True
+            elif next_is_warning:
+                self.warnings.append(line)
+                next_is_warning = False
             else:
-                if next_is_warning:
-                    self.warnings.append(line)
-                    next_is_warning = False
-                else:
-                    for msg in self._msgs:
-                        if msg in line:
-                            self.warnings.append(line)
+                for msg in self._msgs:
+                    if msg in line:
+                        self.warnings.append(line)
 
     def getResultSummary(self):
         summary = f'{self.name} {len(self.warnings)} warnings'
@@ -439,7 +429,5 @@ class Sphinx(buildstep.ShellMixin, buildstep.BuildStep):
         self.setStatistic('warnings', len(self.warnings))
 
         if self.success:
-            if not self.warnings:
-                return SUCCESS
-            return WARNINGS
+            return SUCCESS if not self.warnings else WARNINGS
         return FAILURE

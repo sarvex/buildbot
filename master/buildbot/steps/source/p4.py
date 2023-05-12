@@ -248,16 +248,14 @@ class P4(Source):
             if self.debug:
                 log.msg(f"P4:_dovccmd():Source step failed while running command {cmd}")
             raise buildstep.BuildStepFailed()
-        if collectStdout:
-            return cmd.stdout
-        return cmd.rc
+        return cmd.stdout if collectStdout else cmd.rc
 
     def _getMethod(self):
         if self.method is not None and self.mode != 'incremental':
             return self.method
         elif self.mode == 'incremental':
             return None
-        elif self.method is None and self.mode == 'full':
+        elif self.mode == 'full':
             return 'fresh'
         return None
 
@@ -333,7 +331,7 @@ class P4(Source):
 
         stdout = yield self._dovccmd(['client', '-i'], collectStdout=True, initialStdin=client_spec)
         mo = re.search(r'Client (\S+) (.+)$', stdout, re.M)
-        return mo and (mo.group(2) == 'saved.' or mo.group(2) == 'not changed.')
+        return mo and mo[2] in ['saved.', 'not changed.']
 
     @defer.inlineCallbacks
     def _acquireTicket(self):
@@ -396,5 +394,4 @@ class P4(Source):
     def computeSourceRevision(self, changes):
         if not changes or None in [c.revision for c in changes]:
             return None
-        lastChange = max(int(c.revision) for c in changes)
-        return lastChange
+        return max(int(c.revision) for c in changes)

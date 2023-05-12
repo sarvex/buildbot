@@ -28,17 +28,20 @@ class TryClientE2E(RunMasterBase):
 
     @defer.inlineCallbacks
     def setup_config(self):
-        c = {}
         from buildbot.config import BuilderConfig
         from buildbot.process.factory import BuildFactory
         from buildbot.plugins import steps, schedulers
 
-        c['schedulers'] = [
-            schedulers.Try_Userpass(name="try",
-                                    builderNames=["testy"],
-                                    port='tcp:0',
-                                    userpass=[("alice", "pw1")])
-        ]
+        c = {
+            'schedulers': [
+                schedulers.Try_Userpass(
+                    name="try",
+                    builderNames=["testy"],
+                    port='tcp:0',
+                    userpass=[("alice", "pw1")],
+                )
+            ]
+        }
         f = BuildFactory()
         f.addStep(steps.ShellCommand(command='echo hello'))
         c['builders'] = [

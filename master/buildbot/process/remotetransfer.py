@@ -82,10 +82,7 @@ class FileWriter(base.FileWriterImpl):
             os.chmod(self.destfile, self.mode)
 
     def cancel(self):
-        # unclean shutdown, the file is probably truncated, so delete it
-        # altogether rather than deliver a corrupted file
-        fp = getattr(self, "fp", None)
-        if fp:
+        if fp := getattr(self, "fp", None):
             fp.close()
             if self.destfile and os.path.exists(self.destfile):
                 os.unlink(self.destfile)
@@ -149,11 +146,7 @@ class FileReader(base.FileReaderImpl):
         @return: Data read from L{fp}
         @rtype: C{string} of bytes read from file
         """
-        if self.fp is None:
-            return ''
-
-        data = self.fp.read(maxlength)
-        return data
+        return '' if self.fp is None else self.fp.read(maxlength)
 
     def remote_close(self):
         """

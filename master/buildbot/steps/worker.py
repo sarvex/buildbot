@@ -64,8 +64,7 @@ class SetPropertiesFromEnv(WorkerBuildStep):
             key = variable
             if fold_to_uppercase:
                 key = variable.upper()
-            value = environ.get(key, None)
-            if value:
+            if value := environ.get(key, None):
                 # note that the property is not uppercased
                 properties.setProperty(variable, value, self.source,
                                        runtime=True)
@@ -133,8 +132,7 @@ class CopyDirectory(WorkerBuildStep):
     def run(self):
         self.checkWorkerHasCommand('cpdir')
 
-        args = {'fromdir': self.src, 'todir': self.dest}
-        args['timeout'] = self.timeout
+        args = {'fromdir': self.src, 'todir': self.dest, 'timeout': self.timeout}
         if self.maxTime:
             args['maxTime'] = self.maxTime
 
@@ -302,9 +300,7 @@ class CompositeStepMixin():
             args['workersrc'] = filename
 
         def commandComplete(cmd):
-            if cmd.didFail():
-                return None
-            return fileWriter.buffer
+            return None if cmd.didFail() else fileWriter.buffer
 
         return self.runRemoteCommand('uploadFile', args,
                                      abandonOnFailure=abandonOnFailure,
@@ -333,9 +329,8 @@ class CompositeStepMixin():
             args['workerdest'] = workerdest
 
         def commandComplete(cmd):
-            if cmd.didFail():
-                return None
-            return fileReader
+            return None if cmd.didFail() else fileReader
+
         return self.runRemoteCommand('downloadFile', args,
                                      abandonOnFailure=abandonOnFailure,
                                      evaluateCommand=commandComplete)

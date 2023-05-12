@@ -155,9 +155,7 @@ class BufferLogObserver(LogObserver):
             self.stderr.append(data)
 
     def _get(self, chunks):
-        if chunks is None or not chunks:
-            return ''
-        return ''.join(chunks)
+        return '' if chunks is None or not chunks else ''.join(chunks)
 
     def getStdout(self):
         return self._get(self.stdout)

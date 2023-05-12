@@ -290,7 +290,7 @@ class BitbucketServerCoreAPIStatusPush(ReporterBase):
             status_name = f'{props.getProperty("buildername")} #{props.getProperty("buildnumber")}'
             if parent_name:
                 status_name = \
-                    f"{parent_name} #{build['parentbuild']['number']} \u00BB {status_name}"
+                        f"{parent_name} #{build['parentbuild']['number']} \u00BB {status_name}"
         if self.status_suffix:
             status_name = status_name + (yield props.render(self.status_suffix))
 
@@ -314,10 +314,7 @@ class BitbucketServerCoreAPIStatusPush(ReporterBase):
                 ref = None
                 if self.ref is None:
                     if branch is not None:
-                        if branch.startswith("refs/"):
-                            ref = branch
-                        else:
-                            ref = f"refs/heads/{branch}"
+                        ref = branch if branch.startswith("refs/") else f"refs/heads/{branch}"
                 else:
                     ref = yield props.render(self.ref)
 
@@ -326,10 +323,9 @@ class BitbucketServerCoreAPIStatusPush(ReporterBase):
                             "Build status will not be visible on Builds or "
                             "PullRequest pages only for commits")
 
-                r = re.search(r"^.*?/([^/]+)/([^/]+?)(?:\.git)?$", repo or "")
-                if r:
-                    proj_key = r.group(1)
-                    repo_slug = r.group(2)
+                if r := re.search(r"^.*?/([^/]+)/([^/]+?)(?:\.git)?$", repo or ""):
+                    proj_key = r[1]
+                    repo_slug = r[2]
                 else:
                     log.msg(f"Unable to parse repository info from '{repo}' for SSID: {ssid}")
                     continue

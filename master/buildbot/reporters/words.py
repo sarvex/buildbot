@@ -144,7 +144,7 @@ class Channel(service.AsyncService):
                           # this is deprecated list
                           "(success|warnings|failure|exception)To"
                           "(Success|Warnings|Failure|Exception))$").match(event):
-            raise UsageError("Try '" + self.bot.commandPrefix + "notify on|off _EVENT_'.")
+            raise UsageError(f"Try '{self.bot.commandPrefix}notify on|off _EVENT_'.")
 
     @defer.inlineCallbacks
     def list_notified_events(self):
@@ -155,10 +155,7 @@ class Channel(service.AsyncService):
             yield self.send("No events are being notified.")
 
     def notify_for(self, *events):
-        for event in events:
-            if event in self.notify_events:
-                return True
-        return False
+        return any(event in self.notify_events for event in events)
 
     @defer.inlineCallbacks
     def subscribe_to_build_events(self):
@@ -173,9 +170,7 @@ class Channel(service.AsyncService):
         def workerEvent(key, msg):
             if key[2] == 'missing':
                 return self.workerMissing(msg)
-            if key[2] == 'connected':
-                return self.workerConnected(msg)
-            return None
+            return self.workerConnected(msg) if key[2] == 'connected' else None
 
         for e, f in (("new", buildStarted),             # BuilderStarted
                      ("finished", buildFinished)):      # BuilderFinished
@@ -235,8 +230,7 @@ class Channel(service.AsyncService):
         builder = yield self.bot.getBuilder(builderid=build['builderid'])
         builderName = builder['name']
         buildNumber = build['number']
-        log.msg(f"[Contact] Builder {builder['name']} started")
-
+        log.msg(f"[Contact] Builder {builderName} started")
         # only notify about builders we are interested in
         if (self.bot.tags is not None and
                 not self.builderMatchesAnyTag(builder.get('tags', []))):
@@ -250,18 +244,12 @@ class Channel(service.AsyncService):
             revisions = yield self.getRevisionsForBuild(build)
             r = f"Build containing revision(s) {','.join(revisions)} on {builderName} started"
         else:
-            # Abbreviate long lists of changes to simply two
-            # revisions, and the number of additional changes.
-            # TODO: We can't get the list of the changes related to a build in
-            # nine
-            changes_str = ""
-
             url = utils.getURLForBuild(self.master, builder['builderid'], build['number'])
             r = f"Build [#{buildNumber}]({url}) of `{builderName}` started"
-            if changes_str:
+            if changes_str := "":
                 r += f" ({changes_str})"
 
-        self.send(r + ".")
+        self.send(f"{r}.")
 
     @defer.inlineCallbacks
     def buildFinished(self, build, watched=False):
@@ -291,11 +279,7 @@ class Channel(service.AsyncService):
             r = (f"Build [#{buildNumber}]({url}) of `{builderName}` "
                  f"{self.bot.format_build_status(build)}")
         s = build.get('status_string')
-        if build['results'] != SUCCESS and s is not None:
-            r += ": " + s
-        else:
-            r += "."
-
+        r += f": {s}" if build['results'] != SUCCESS and s is not None else "."
         # FIXME: where do we get the list of changes for a build ?
         # if self.bot.showBlameList and buildResult != SUCCESS and len(build.changes) != 0:
         #    r += '  blamelist: ' + ', '.join(list(set([c.who for c in build.changes])))
@@ -426,7 +410,7 @@ class Contact:
     def getCommandMethod(self, command):
         command = command.upper()
         try:
-            method = getattr(self, 'command_' + command)
+            method = getattr(self, f'command_{command}')
         except AttributeError:
             return None
         get_authz = self.bot.authz.get
@@ -441,9 +425,7 @@ class Contact:
             acl = self.user_id in acl
         elif acl not in (True, False, None):
             acl = self.user_id == acl
-        if not acl:
-            return self.access_denied
-        return method
+        return self.access_denied if not acl else method
 
     @defer.inlineCallbacks
     def handleMessage(self, message, **kwargs):
@@ -533,8 +515,7 @@ class Contact:
                 if bdict['builderid'] in online_builderids:
                     response.append(bdict['name'])
                 elif all:
-                    response.append(bdict['name'])
-                    response.append("[offline]")
+                    response.extend((bdict['name'], "[offline]"))
             self.send(' '.join(response))
 
         elif args[0] == 'workers':
@@ -547,8 +528,7 @@ class Contact:
                     if not worker['connected_to']:
                         response.append("[disconnected]")
                 elif all:
-                    response.append(worker['name'])
-                    response.append("[offline]")
+                    response.extend((worker['name'], "[offline]"))
             self.send(' '.join(response))
 
         elif args[0] == 'changes':
@@ -585,7 +565,7 @@ class Contact:
         elif len(args) == 1:
             which = args[0]
         else:
-            raise UsageError("Try '" + self.bot.commandPrefix + "status _builder_'.")
+            raise UsageError(f"Try '{self.bot.commandPrefix}status _builder_'.")
         response = []
         if which == "":
             builders = yield self.bot.getAllBuilders()
@@ -612,7 +592,9 @@ class Contact:
         args = self.splitArgs(args)
 
         if not args:
-            raise UsageError("Try '" + self.bot.commandPrefix + "notify on|off|list [_EVENT_]'.")
+            raise UsageError(
+                f"Try '{self.bot.commandPrefix}notify on|off|list [_EVENT_]'."
+            )
         action = args.pop(0)
         events = args
 
@@ -639,7 +621,9 @@ class Contact:
             yield self.channel.list_notified_events()
 
         else:
-            raise UsageError("Try '" + self.bot.commandPrefix + "notify on|off|list [_EVENT_]'.")
+            raise UsageError(
+                f"Try '{self.bot.commandPrefix}notify on|off|list [_EVENT_]'."
+            )
 
     command_NOTIFY.usage = ("notify on|off|list [_EVENT_] ... - notify me about build events;"
                             "  event should be one or more of: 'started', 'finished', 'failure',"
@@ -650,7 +634,7 @@ class Contact:
         """announce the completion of an active build"""
         args = self.splitArgs(args)
         if len(args) != 1:
-            raise UsageError("Try '" + self.bot.commandPrefix + "watch _builder_'.")
+            raise UsageError(f"Try '{self.bot.commandPrefix}watch _builder_'.")
 
         which = args[0]
         builder = yield self.bot.getBuilder(buildername=which)
@@ -711,7 +695,7 @@ class Contact:
         props = opts['props']
 
         if builderName is None:
-            raise UsageError("you must provide a Builder, " + errReply)
+            raise UsageError(f"you must provide a Builder, {errReply}")
 
         # keep weird stuff out of the branch, revision, and properties args.
         branch_validate = self.master.config.validation['branch']
@@ -741,7 +725,7 @@ class Contact:
             # set properties
             for pname, pvalue in pdict.items():
                 if not pname_validate.match(pname) \
-                        or not pval_validate.match(pvalue):
+                            or not pval_validate.match(pvalue):
                     self.bot.log(f"Force: bad property name='{pname}', value='{pvalue}'")
                     self.send(f"Sorry, bad property name='{pname}', value='{pvalue}'")
                     return
@@ -764,7 +748,7 @@ class Contact:
                                                        properties=properties.asDict(),
                                                        waited_for=False)
         except AssertionError as e:
-            self.send("I can't: " + str(e))
+            self.send(f"I can't: {str(e)}")
         else:
             self.send("Force build successfully requested.")
 
@@ -778,7 +762,7 @@ class Contact:
         """stop a running build"""
         args = self.splitArgs(args)
         if len(args) < 3 or args[0] != 'build':
-            raise UsageError("Try '" + self.bot.commandPrefix + "stop build _which_ _reason_'.")
+            raise UsageError(f"Try '{self.bot.commandPrefix}stop build _which_ _reason_'.")
         which = args[1]
         reason = ' '.join(args[2:])
 
@@ -828,7 +812,7 @@ class Contact:
                     raise UsageError("no such builder")
                 builders = [builder]
         else:
-            raise UsageError("Try '" + self.bot.commandPrefix + "last _builder_'.")
+            raise UsageError(f"Try '{self.bot.commandPrefix}last _builder_'.")
 
         messages = []
 
@@ -837,8 +821,7 @@ class Contact:
             if not lastBuild:
                 status = "no builds run since last restart"
             else:
-                complete_at = lastBuild['complete_at']
-                if complete_at:
+                if complete_at := lastBuild['complete_at']:
                     complete_at = util.datetime2epoch(complete_at)
                     ago = util.fuzzyInterval(int(reactor.seconds() -
                                                  complete_at))
@@ -856,10 +839,7 @@ class Contact:
 
     @classmethod
     def build_commands(cls):
-        commands = []
-        for k in dir(cls):
-            if k.startswith('command_'):
-                commands.append(k[8:].lower())
+        commands = [k[8:].lower() for k in dir(cls) if k.startswith('command_')]
         commands.sort()
         return commands
 
@@ -877,7 +857,7 @@ class Contact:
             commands = self.build_commands()
             response = []
             for command in commands:
-                meth = getattr(self, 'command_' + command.upper())
+                meth = getattr(self, f'command_{command.upper()}')
                 doc = getattr(meth, '__doc__', None)
                 if doc:
                     response.append(f"{command} - {doc}")
@@ -887,7 +867,7 @@ class Contact:
         command = args[0]
         if command.startswith(self.bot.commandPrefix):
             command = command[len(self.bot.commandPrefix):]
-        meth = getattr(self, 'command_' + command.upper(), None)
+        meth = getattr(self, f'command_{command.upper()}', None)
         if not meth:
             raise UsageError(f"There is no such command '{args[0]}'.")
         doc = getattr(meth, 'usage', None)
@@ -930,7 +910,9 @@ class Contact:
         """shutdown the buildbot master"""
         # FIXME: NEED TO THINK ABOUT!
         if args not in ('check', 'start', 'stop', 'now'):
-            raise UsageError("Try '" + self.bot.commandPrefix + "shutdown check|start|stop|now'.")
+            raise UsageError(
+                f"Try '{self.bot.commandPrefix}shutdown check|start|stop|now'."
+            )
 
         botmaster = self.channel.master.botmaster
         shuttingDown = botmaster.shuttingDown
@@ -1002,13 +984,16 @@ class StatusBot(service.AsyncMultiService):
         return expanded_authz
 
     def isValidUser(self, user):
-        for auth in self.authz.values():
-            if auth is True \
-                    or (isinstance(auth, (list, tuple)) and user in auth)\
-                    or user == auth:
-                return True
-        # If user is in '', we have already returned; otherwise check if defaults apply
-        return '' not in self.authz
+        return next(
+            (
+                True
+                for auth in self.authz.values()
+                if auth is True
+                or (isinstance(auth, (list, tuple)) and user in auth)
+                or user == auth
+            ),
+            '' not in self.authz,
+        )
 
     def getContact(self, user, channel):
         """ get a Contact instance for ``user`` on ``channel`` """
@@ -1099,10 +1084,13 @@ class StatusBot(service.AsyncMultiService):
         return any(tag for tag in builder_tags if tag in self.tags)
 
     def getRunningBuilds(self, builderid):
-        d = self.master.data.get(('builds',),
-                                 filters=[resultspec.Filter('builderid', 'eq', [builderid]),
-                                          resultspec.Filter('complete', 'eq', [False])])
-        return d
+        return self.master.data.get(
+            ('builds',),
+            filters=[
+                resultspec.Filter('builderid', 'eq', [builderid]),
+                resultspec.Filter('complete', 'eq', [False]),
+            ],
+        )
 
     def getLastCompletedBuild(self, builderid):
         d = self.master.data.get(('builds',),
@@ -1113,19 +1101,17 @@ class StatusBot(service.AsyncMultiService):
 
         @d.addCallback
         def listAsOneOrNone(res):
-            if res:
-                return res[0]
-            return None
+            return res[0] if res else None
 
         return d
 
     def getCurrentBuildstep(self, build):
-        d = self.master.data.get(('builds', build['buildid'], 'steps'),
-                                 filters=[
-                                     resultspec.Filter('complete', 'eq', [False])],
-                                 order=['number'],
-                                 limit=1)
-        return d
+        return self.master.data.get(
+            ('builds', build['buildid'], 'steps'),
+            filters=[resultspec.Filter('complete', 'eq', [False])],
+            order=['number'],
+            limit=1,
+        )
 
     @defer.inlineCallbacks
     def getBuildStatus(self, which, short=False):
@@ -1142,8 +1128,7 @@ class StatusBot(service.AsyncMultiService):
                 response += self.idle_string
                 lastBuild = yield self.getLastCompletedBuild(builderid)
                 if lastBuild:
-                    complete_at = lastBuild['complete_at']
-                    if complete_at:
+                    if complete_at := lastBuild['complete_at']:
                         complete_at = util.datetime2epoch(complete_at)
                         ago = util.fuzzyInterval(int(reactor.seconds() -
                                                      complete_at))
@@ -1151,11 +1136,10 @@ class StatusBot(service.AsyncMultiService):
                         ago = "??"
                     status = self.format_build_status(lastBuild, short=short)
                     if not short:
-                        status = ", " + status
+                        status = f", {status}"
                         if lastBuild['results'] != SUCCESS:
-                            status_string = lastBuild.get('status_string')
-                            if status_string:
-                                status += ": " + status_string
+                            if status_string := lastBuild.get('status_string'):
+                                status += f": {status_string}"
                     response += f'  last build {ago} ago{status}'
             else:
                 response += self.offline_string
@@ -1164,10 +1148,7 @@ class StatusBot(service.AsyncMultiService):
             buildInfo = []
             for build in runningBuilds:
                 step = yield self.getCurrentBuildstep(build)
-                if step:
-                    s = f"({step[-1]['state_string']})"
-                else:
-                    s = "(no current step)"
+                s = f"({step[-1]['state_string']})" if step else "(no current step)"
                 bnum = build['number']
                 url = utils.getURLForBuild(self.master, builderid, bnum)
                 buildInfo.append(f"build [#{bnum}]({url}) {s}")
@@ -1182,27 +1163,19 @@ class StatusBot(service.AsyncMultiService):
             bdicts = yield self.master.data.get(('builders',),
                                                 filters=[resultspec.Filter('name', 'eq',
                                                                            [buildername])])
-            if bdicts:
-                # Could there be more than one? One is enough.
-                bdict = bdicts[0]
-            else:
-                bdict = None
+            bdict = bdicts[0] if bdicts else None
         elif builderid:
             bdict = yield self.master.data.get(('builders', builderid))
         else:
             raise UsageError("no builder specified")
 
         if bdict is None:
-            if buildername:
-                which = buildername
-            else:
-                which = f'number {builderid}'
+            which = buildername if buildername else f'number {builderid}'
             raise UsageError(f"no such builder '{which}'")
         return bdict
 
     def getAllBuilders(self):
-        d = self.master.data.get(('builders',))
-        return d
+        return self.master.data.get(('builders',))
 
     @defer.inlineCallbacks
     def getOnlineBuilders(self):

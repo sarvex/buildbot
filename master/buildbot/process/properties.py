@@ -67,9 +67,7 @@ class Properties(util.ComparableMixin):
 
     @property
     def master(self):
-        if self.build is not None:
-            return self.build.master
-        return self._master
+        return self.build.master if self.build is not None else self._master
 
     @master.setter
     def master(self, value):
@@ -88,10 +86,14 @@ class Properties(util.ComparableMixin):
         self._sourcestamps = value
 
     def getSourceStamp(self, codebase=''):
-        for source in self.sourcestamps:
-            if source['codebase'] == codebase:
-                return source
-        return None
+        return next(
+            (
+                source
+                for source in self.sourcestamps
+                if source['codebase'] == codebase
+            ),
+            None,
+        )
 
     @property
     def changes(self):
@@ -137,8 +139,7 @@ class Properties(util.ComparableMixin):
 
     def __getitem__(self, name):
         """Just get the value for this property."""
-        rv = self.properties[name][0]
-        return rv
+        return self.properties[name][0]
 
     def __bool__(self):
         return bool(self.properties)
@@ -148,8 +149,7 @@ class Properties(util.ComparableMixin):
 
     def asList(self):
         """Return the properties as a sorted list of (name, value, source)"""
-        ret = sorted([(k, v[0], v[1]) for k, v in self.properties.items()])
-        return ret
+        return sorted([(k, v[0], v[1]) for k, v in self.properties.items()])
 
     def asDict(self):
         """Return the properties as a simple key:value dictionary,
@@ -157,9 +157,9 @@ class Properties(util.ComparableMixin):
         return self.properties.copy()
 
     def __repr__(self):
-        return ('Properties(**' +
-                repr(dict((k, v[0]) for k, v in self.properties.items())) +
-                ')')
+        return (
+            'Properties(**' + repr({k: v[0] for k, v in self.properties.items()})
+        ) + ')'
 
     def update(self, dict, source, runtime=False):
         """Update this object from a dictionary, with an explicit source specified."""
@@ -213,7 +213,7 @@ class Properties(util.ComparableMixin):
     # so we have the renderable record here which secrets are used that we must remove
     def useSecret(self, secret_value, secret_name):
         if secret_value.strip():
-            self._used_secrets[secret_value] = "<" + secret_name + ">"
+            self._used_secrets[secret_value] = f"<{secret_name}>"
 
     # This method shall then be called to remove secrets from any text that could be logged
     # somewhere and that could contain secrets
@@ -376,9 +376,7 @@ class _PropertyMap:
             # %(prop:+repl)s
             # if prop exists, use repl; otherwise, an empty string
             prop, repl = mo.group(1, 2)
-            if prop in properties or prop in self.temp_vals:
-                return repl
-            return ''
+            return repl if prop in properties or prop in self.temp_vals else ''
 
         for regexp, fn in [
             (self.colon_minus_re, colon_minus),
@@ -392,11 +390,7 @@ class _PropertyMap:
         else:
             # If explicitly passed as a kwarg, use that,
             # otherwise, use the property value.
-            if key in self.temp_vals:
-                rv = self.temp_vals[key]
-            else:
-                rv = properties[key]
-
+            rv = self.temp_vals[key] if key in self.temp_vals else properties[key]
         # translate 'None' to an empty string
         if rv is None:
             rv = ''
@@ -432,15 +426,12 @@ class WithProperties(util.ComparableMixin):
     def getRenderingFor(self, build):
         pmap = _PropertyMap(build.getProperties())
         if self.args:
-            strings = []
-            for name in self.args:
-                strings.append(pmap[name])
-            s = self.fmtstring % tuple(strings)
+            strings = [pmap[name] for name in self.args]
+            return self.fmtstring % tuple(strings)
         else:
             for k, v in self.lambda_subs.items():
                 pmap.add_temporary_value(k, v(build))
-            s = self.fmtstring % pmap
-        return s
+            return self.fmtstring % pmap
 
 
 class _NotHasKey(util.ComparableMixin):
@@ -496,17 +487,16 @@ class _Lookup(util.ComparableMixin):
         value, index = yield defer.gatherResults([value, index])
         if index not in value:
             rv = yield build.render(self.default)
-        else:
-            if self.defaultWhenFalse:
-                rv = yield build.render(value[index])
-                if not rv:
-                    rv = yield build.render(self.default)
-                elif self.hasKey != _notHasKey:
-                    rv = yield build.render(self.hasKey)
+        elif self.defaultWhenFalse:
+            rv = yield build.render(value[index])
+            if not rv:
+                rv = yield build.render(self.default)
             elif self.hasKey != _notHasKey:
                 rv = yield build.render(self.hasKey)
-            else:
-                rv = yield build.render(value[index])
+        elif self.hasKey != _notHasKey:
+            rv = yield build.render(self.hasKey)
+        else:
+            rv = yield build.render(value[index])
         if rv is None:
             rv = yield build.render(self.elideNoneAs)
         return rv
@@ -585,10 +575,7 @@ class _SourceStampDict(util.ComparableMixin):
         self.codebase = codebase
 
     def getRenderingFor(self, props):
-        ss = props.getSourceStamp(self.codebase)
-        if ss:
-            return ss
-        return {}
+        return ss if (ss := props.getSourceStamp(self.codebase)) else {}
 
 
 @implementer(IRenderable)
@@ -702,7 +689,7 @@ class Interpolate(RenderableOperatorsMixin, util.ComparableMixin):
             config.error(f"invalid Interpolate substitution without selector '{fmt}'")
             return None
 
-        fn = getattr(self, "_parse_" + key, None)
+        fn = getattr(self, f"_parse_{key}", None)
         if not fn:
             config.error(f"invalid Interpolate selector '{key}'")
             return None
@@ -714,12 +701,12 @@ class Interpolate(RenderableOperatorsMixin, util.ComparableMixin):
         for i, val in enumerate(arg):
             if val == "(":
                 parenCount += 1
-            if val == ")":
+            elif val == ")":
                 parenCount -= 1
                 if parenCount < 0:
                     raise ValueError
             if parenCount == 0 and val == delim:
-                return arg[0:i], arg[i + 1:]
+                return arg[:i], arg[i + 1:]
         return arg
 
     def _parseColon_minus(self, d, kw, repl):
@@ -779,8 +766,8 @@ class Interpolate(RenderableOperatorsMixin, util.ComparableMixin):
                     if not junk and matches:
                         self.interpolations[key] = fn(d, kw, tail)
                         break
-                if key not in self.interpolations:
-                    config.error(f"invalid Interpolate default type '{repl[0]}'")
+            if key not in self.interpolations:
+                config.error(f"invalid Interpolate default type '{repl[0]}'")
 
     def getRenderingFor(self, build):
         props = build.getProperties()
@@ -825,9 +812,8 @@ class Property(RenderableOperatorsMixin, util.ComparableMixin):
 
             @d.addCallback
             def checkDefault(rv):
-                if rv:
-                    return rv
-                return props.render(self.default)
+                return rv if rv else props.render(self.default)
+
             return d
 
         if props.hasProperty(self.key):
@@ -879,8 +865,7 @@ class _Renderer(util.ComparableMixin):
     def withArgs(self, *args, **kwargs):
         new_renderer = _Renderer(self.fn)
         new_renderer.args = self.args + list(args)
-        new_renderer.kwargs = dict(self.kwargs)
-        new_renderer.kwargs.update(kwargs)
+        new_renderer.kwargs = dict(self.kwargs) | kwargs
         return new_renderer
 
     @defer.inlineCallbacks

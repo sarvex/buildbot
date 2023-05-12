@@ -48,7 +48,7 @@ class ReporterBase(service.BuildbotService):
         if self.name is None:
             self.name = self.__class__.__name__
             for g in generators:
-                self.name += "_" + g.generate_name()
+                self.name += f"_{g.generate_name()}"
 
     @defer.inlineCallbacks
     def reconfigService(self, generators):
@@ -82,10 +82,10 @@ class ReporterBase(service.BuildbotService):
         yield super().stopService()
 
     def _does_generator_want_key(self, generator, key):
-        for filter in generator.wanted_event_keys:
-            if tuplematch.matchTuple(key, filter):
-                return True
-        return False
+        return any(
+            tuplematch.matchTuple(key, filter)
+            for filter in generator.wanted_event_keys
+        )
 
     @defer.inlineCallbacks
     def _got_event(self, key, msg):

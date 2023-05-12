@@ -123,9 +123,7 @@ class HgPoller(base.ReconfigurablePollingChangeSource, StateMixin):
         return name
 
     def build_branches(self, branch, branches):
-        if branch:
-            return [branch]
-        return branches or []
+        return [branch] if branch else branches or []
 
     @defer.inlineCallbacks
     def activate(self):
@@ -133,9 +131,7 @@ class HgPoller(base.ReconfigurablePollingChangeSource, StateMixin):
         super().activate()
 
     def describe(self):
-        status = ""
-        if not self.master:
-            status = "[STOPPED - check log]"
+        status = "[STOPPED - check log]" if not self.master else ""
         return (f"HgPoller watching the remote Mercurial repository '{self.repourl}', "
                 f"branches: {', '.join(self.branches)}, in workdir '{self.workdir}' {status}")
 
@@ -309,8 +305,7 @@ class HgPoller(base.ReconfigurablePollingChangeSource, StateMixin):
 
         results = stdout.decode(self.encoding)
 
-        revNodeList = [rn.split(':', 1) for rn in results.strip().split()]
-        return revNodeList
+        return [rn.split(':', 1) for rn in results.strip().split()]
 
     @defer.inlineCallbacks
     def _processBranchChanges(self, new_rev, branch):

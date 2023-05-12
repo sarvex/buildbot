@@ -28,9 +28,7 @@ class FakeMachineManager(service.AsyncMultiService):
         return self.namedServices
 
     def getMachineByName(self, name):
-        if name in self.machines:
-            return self.machines[name]
-        return None
+        return self.machines[name] if name in self.machines else None
 
 
 class LatentMachineController:

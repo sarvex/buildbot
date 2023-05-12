@@ -131,8 +131,7 @@ class TestP4Poller(changesource.ChangeSourceMixin, MasterRunProcessMixin,
 
     def makeTime(self, timestring):
         datefmt = '%Y/%m/%d %H:%M:%S'
-        when = datetime.datetime.strptime(timestring, datefmt)
-        return when
+        return datetime.datetime.strptime(timestring, datefmt)
 
     @defer.inlineCallbacks
     def test_describe(self):

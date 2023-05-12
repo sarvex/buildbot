@@ -28,12 +28,11 @@ class FakeMsgManager(service.AsyncMultiService):
         self._unregistrations = []
 
     def register(self, portstr, username, password, pfactory):
-        if (portstr, username) not in self._registrations:
-            reg = FakeRegistration(self, portstr, username)
-            self._registrations.append((portstr, username, password))
-            return defer.succeed(reg)
-        else:
+        if (portstr, username) in self._registrations:
             raise KeyError(f"username '{username}' is already registered on port {portstr}")
+        reg = FakeRegistration(self, portstr, username)
+        self._registrations.append((portstr, username, password))
+        return defer.succeed(reg)
 
     def _unregister(self, portstr, username):
         self._unregistrations.append((portstr, username))

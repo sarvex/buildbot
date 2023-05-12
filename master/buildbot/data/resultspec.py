@@ -80,15 +80,9 @@ class FieldBase:
     def getOperator(self, sqlMode=False):
         v = self.values
         if len(v) == 1:
-            if sqlMode:
-                ops = self.singular_operators_sql
-            else:
-                ops = self.singular_operators
+            ops = self.singular_operators_sql if sqlMode else self.singular_operators
         else:
-            if sqlMode:
-                ops = self.plural_operators_sql
-            else:
-                ops = self.plural_operators
+            ops = self.plural_operators_sql if sqlMode else self.plural_operators
             v = set(v)
         return ops[self.op]
 
@@ -102,10 +96,7 @@ class FieldBase:
         return f"resultspec.{self.__class__.__name__}('{self.field}','{self.op}',{self.values})"
 
     def __eq__(self, b):
-        for i in self.__slots__:
-            if getattr(self, i) != getattr(b, i):
-                return False
-        return True
+        return all(getattr(self, i) == getattr(b, i) for i in self.__slots__)
 
     def __ne__(self, b):
         return not self == b
@@ -205,10 +196,17 @@ class ResultSpec:
                 f"'offset': {self.offset}" + "})")
 
     def __eq__(self, b):
-        for i in ['filters', 'fields', 'properties', 'order', 'limit', 'offset']:
-            if getattr(self, i) != getattr(b, i):
-                return False
-        return True
+        return all(
+            getattr(self, i) == getattr(b, i)
+            for i in [
+                'filters',
+                'fields',
+                'properties',
+                'order',
+                'limit',
+                'offset',
+            ]
+        )
 
     def __ne__(self, b):
         return not self == b
@@ -238,15 +236,11 @@ class ResultSpec:
         if eqVals and len(eqVals) == 1:
             return eqVals[0]
         neVals = self.popFilter(field, 'ne')
-        if neVals and len(neVals) == 1:
-            return not neVals[0]
-        return None
+        return not neVals[0] if neVals and len(neVals) == 1 else None
 
     def popStringFilter(self, field):
         eqVals = self.popFilter(field, 'eq')
-        if eqVals and len(eqVals) == 1:
-            return eqVals[0]
-        return None
+        return eqVals[0] if eqVals and len(eqVals) == 1 else None
 
     def popIntegerFilter(self, field):
         eqVals = self.popFilter(field, 'eq')
@@ -365,8 +359,8 @@ class ResultSpec:
             fields = set(self.fields)
 
             def includeFields(d):
-                return dict((k, v) for k, v in d.items()
-                            if k in fields)
+                return {k: v for k, v in d.items() if k in fields}
+
             applyFields = includeFields
         else:
             fields = None
@@ -384,7 +378,7 @@ class ResultSpec:
             if isinstance(data, base.ListResult):
                 # if pagination was applied, then fields, etc. must be empty
                 assert not fields and not order and not filters, \
-                    "endpoint must apply fields, order, and filters if it performs pagination"
+                        "endpoint must apply fields, order, and filters if it performs pagination"
                 offset, total = data.offset, data.total
                 limit = data.limit
             else:

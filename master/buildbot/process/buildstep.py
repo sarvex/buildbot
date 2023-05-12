@@ -293,8 +293,7 @@ class BuildStep(results.ResultComputingConfigMixin,
 
     def __str__(self):
         args = [repr(x) for x in self._factory.args]
-        args.extend([str(k) + "=" + repr(v)
-                     for k, v in self._factory.kwargs.items()])
+        args.extend([f"{str(k)}={repr(v)}" for k, v in self._factory.kwargs.items()])
         return f'{self.__class__.__name__}({", ".join(args)})'
 
     __repr__ = __str__
@@ -313,26 +312,21 @@ class BuildStep(results.ResultComputingConfigMixin,
 
     @property
     def workdir(self):
-        # default the workdir appropriately
         if self._workdir is not None or self.build is None:
             return self._workdir
-        else:
-            # see :ref:`Factory-Workdir-Functions` for details on how to
-            # customize this
-            if callable(self.build.workdir):
-                try:
-                    return self.build.workdir(self.build.sources)
-                except AttributeError as e:
-                    # if the callable raises an AttributeError
-                    # python thinks it is actually workdir that is not existing.
-                    # python will then swallow the attribute error and call
-                    # __getattr__ from worker_transition
-                    _, _, traceback = sys.exc_info()
-                    raise CallableAttributeError(e).with_traceback(traceback)
-                    # we re-raise the original exception by changing its type,
-                    # but keeping its stacktrace
-            else:
-                return self.build.workdir
+        if not callable(self.build.workdir):
+            return self.build.workdir
+        try:
+            return self.build.workdir(self.build.sources)
+        except AttributeError as e:
+            # if the callable raises an AttributeError
+            # python thinks it is actually workdir that is not existing.
+            # python will then swallow the attribute error and call
+            # __getattr__ from worker_transition
+            _, _, traceback = sys.exc_info()
+            raise CallableAttributeError(e).with_traceback(traceback)
+            # we re-raise the original exception by changing its type,
+            # but keeping its stacktrace
 
     @workdir.setter
     def workdir(self, workdir):
@@ -356,7 +350,7 @@ class BuildStep(results.ResultComputingConfigMixin,
         if self.description is not None:
             stepsumm = util.join_list(self.description)
             if self.descriptionSuffix:
-                stepsumm += ' ' + util.join_list(self.descriptionSuffix)
+                stepsumm += f' {util.join_list(self.descriptionSuffix)}'
         else:
             stepsumm = 'running'
         return {'step': stepsumm}
@@ -365,7 +359,7 @@ class BuildStep(results.ResultComputingConfigMixin,
         if self.descriptionDone is not None or self.description is not None:
             stepsumm = util.join_list(self.descriptionDone or self.description)
             if self.descriptionSuffix:
-                stepsumm += ' ' + util.join_list(self.descriptionSuffix)
+                stepsumm += f' {util.join_list(self.descriptionSuffix)}'
         else:
             stepsumm = 'finished'
 
@@ -505,15 +499,8 @@ class BuildStep(results.ResultComputingConfigMixin,
             log.err(why, "BuildStep.failed; traceback follows")
             yield self.addLogWithFailure(why)
 
-        if self.stopped and self.results != RETRY:
-            # We handle this specially because we don't care about
-            # the return code of an interrupted command; we know
-            # that this should just be exception due to interrupt
-            # At the same time we must respect RETRY status because it's used
-            # to retry interrupted build due to some other issues for example
-            # due to worker lost
-            if self.results != CANCELLED:
-                self.results = EXCEPTION
+        if self.stopped and self.results != RETRY and self.results != CANCELLED:
+            self.results = EXCEPTION
 
         # determine whether we should hide this step
         hidden = self.hideStepIf
@@ -668,9 +655,9 @@ class BuildStep(results.ResultComputingConfigMixin,
         sv = self.build.getWorkerCommandVersion(command, None)
         if sv is None:
             return True
-        if [int(s) for s in sv.split(".")] < [int(m) for m in minversion.split(".")]:
-            return True
-        return False
+        return [int(s) for s in sv.split(".")] < [
+            int(m) for m in minversion.split(".")
+        ]
 
     def checkWorkerHasCommand(self, command):
         if not self.workerVersion(command):
@@ -720,8 +707,8 @@ class BuildStep(results.ResultComputingConfigMixin,
     def addLogWithFailure(self, why, logprefix=""):
         # helper for showing exceptions to the users
         try:
-            yield self.addCompleteLog(logprefix + "err.text", why.getTraceback())
-            yield self.addHTMLLog(logprefix + "err.html", formatFailure(why))
+            yield self.addCompleteLog(f"{logprefix}err.text", why.getTraceback())
+            yield self.addHTMLLog(f"{logprefix}err.html", formatFailure(why))
         except Exception:
             log.err(Failure(), "error while formatting exceptions")
 
@@ -794,10 +781,7 @@ class CommandMixin:
         yield self.runCommand(cmd)
         if abandonOnFailure and cmd.didFail():
             raise BuildStepFailed()
-        if makeResult:
-            return makeResult(cmd)
-        else:
-            return not cmd.didFail()
+        return makeResult(cmd) if makeResult else not cmd.didFail()
 
     def runRmdir(self, dir, log=None, abandonOnFailure=True):
         return self._runRemoteCommand('rmdir', abandonOnFailure,
@@ -896,12 +880,13 @@ class ShellMixin:
         self.command = kwargs['command']
 
         # check for the usePTY flag
-        if kwargs['usePTY'] is not None:
-            if self.workerVersionIsOlderThan("shell", "2.7"):
-                if stdio is not None:
-                    yield stdio.addHeader(
-                        "NOTE: worker does not allow master to override usePTY\n")
-                del kwargs['usePTY']
+        if kwargs['usePTY'] is not None and self.workerVersionIsOlderThan(
+            "shell", "2.7"
+        ):
+            if stdio is not None:
+                yield stdio.addHeader(
+                    "NOTE: worker does not allow master to override usePTY\n")
+            del kwargs['usePTY']
 
         # check for the interruptSignal flag
         if kwargs["interruptSignal"] and self.workerVersionIsOlderThan("shell", "2.15"):
@@ -955,8 +940,7 @@ class ShellMixin:
     def getResultSummary(self):
         if self.descriptionDone is not None:
             return super().getResultSummary()
-        summary = util.command_to_string(self.command)
-        if summary:
+        if summary := util.command_to_string(self.command):
             if self.results != SUCCESS:
                 summary += f' ({Results[self.results]})'
             return {'step': summary}

@@ -38,10 +38,7 @@ class _OldBuildFilterSet:
         assert builder_name is not None
 
         filters = self._by_builder.get(builder_name, [])
-        for filter in filters:
-            if filter.is_matched(props):
-                return True
-        return False
+        return any(filter.is_matched(props) for filter in filters)
 
 
 class _TrackedCancellable:
@@ -297,7 +294,7 @@ class OldBuildCanceller(BuildbotService):
         if branch.startswith('refs/changes/'):
             m = re.match(r'refs/changes/(\d+)/(\d+)/\d+', branch)
             if m is not None:
-                return f'refs/changes/{m.group(1)}/{m.group(2)}'
+                return f'refs/changes/{m[1]}/{m[2]}'
 
         return branch
 

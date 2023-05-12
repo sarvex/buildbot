@@ -31,17 +31,7 @@ GIT_HASH_LENGTH = 40
 
 def isTrueOrIsExactlyZero(v):
     # nonzero values are true...
-    if v:
-        return True
-
-    # ... and True for the number zero, but we have to
-    # explicitly guard against v==False, since
-    # isinstance(False, int) is surprisingly True
-    if isinstance(v, int) and v is not False:
-        return True
-
-    # all other false-ish values are false
-    return False
+    return True if v else isinstance(v, int) and v is not False
 
 
 git_describe_flags = [
@@ -282,8 +272,7 @@ class Git(Source, GitStepMixin):
         if isinstance(self.getDescription, dict):
             for opt, arg in git_describe_flags:
                 opt = self.getDescription.get(opt, None)
-                arg = arg(opt)
-                if arg:
+                if arg := arg(opt):
                     cmd.extend(arg)
         # 'git describe' takes a commitish as an argument for all options
         # *except* --dirty
@@ -331,10 +320,7 @@ class Git(Source, GitStepMixin):
             if res != RC_SUCCESS:
                 return res
 
-        if self.revision:
-            rev = self.revision
-        else:
-            rev = 'FETCH_HEAD'
+        rev = self.revision if self.revision else 'FETCH_HEAD'
         command = ['checkout', '-f', rev]
         res = yield self._dovccmd(command, abandonOnFailure=abandonOnFailure)
 
@@ -398,10 +384,7 @@ class Git(Source, GitStepMixin):
                 command.append('--progress')
             else:
                 log.msg("Git versions < 1.7.2 don't support progress")
-        if self.retry:
-            abandonOnFailure = (self.retry[1] <= 0)
-        else:
-            abandonOnFailure = True
+        abandonOnFailure = (self.retry[1] <= 0) if self.retry else True
         # If it's a shallow clone abort build step
         res = yield self._dovccmd(command, abandonOnFailure=(abandonOnFailure and shallowClone))
 
@@ -468,9 +451,7 @@ class Git(Source, GitStepMixin):
         return rc
 
     def computeSourceRevision(self, changes):
-        if not changes:
-            return None
-        return changes[-1].revision
+        return None if not changes else changes[-1].revision
 
     @defer.inlineCallbacks
     def _syncSubmodule(self, _=None):
@@ -510,7 +491,7 @@ class Git(Source, GitStepMixin):
             return self.method
         elif self.mode == 'incremental':
             return None
-        elif self.method is None and self.mode == 'full':
+        elif self.mode == 'full':
             return 'fresh'
         return None
 
@@ -518,8 +499,11 @@ class Git(Source, GitStepMixin):
     def applyPatch(self, patch):
         yield self._dovccmd(['update-index', '--refresh'])
 
-        res = yield self._dovccmd(['apply', '--index', '-p', str(patch[0])], initialStdin=patch[1])
-        return res
+        return (
+            yield self._dovccmd(
+                ['apply', '--index', '-p', str(patch[0])], initialStdin=patch[1]
+            )
+        )
 
     @defer.inlineCallbacks
     def _sourcedirIsUpdatable(self):
@@ -527,11 +511,7 @@ class Git(Source, GitStepMixin):
             git_path = self.build.path_module.join(self.workdir, '.git')
             exists = yield self.pathExists(git_path)
 
-            if exists:
-                return "update"
-
-            return "clone"
-
+            return "update" if exists else "clone"
         cmd = remotecommand.RemoteCommand('listdir',
                                           {'dir': self.workdir})
         cmd.useLog(self.stdio_log, False)
@@ -609,8 +589,7 @@ class GitPush(buildstep.BuildStep, GitStepMixin, CompositeStepMixin):
         if self.force:
             cmd.append('--force')
 
-        ret = yield self._dovccmd(cmd)
-        return ret
+        return (yield self._dovccmd(cmd))
 
 
 class GitTag(buildstep.BuildStep, GitStepMixin, CompositeStepMixin):
@@ -666,17 +645,14 @@ class GitTag(buildstep.BuildStep, GitStepMixin, CompositeStepMixin):
         if not gitInstalled:
             raise WorkerSetupError("git is not installed on worker")
 
-        ret = yield self._doTag()
-        return ret
+        return (yield self._doTag())
 
     @defer.inlineCallbacks
     def _doTag(self):
         cmd = ['tag']
 
         if self.annotated:
-            cmd.append('-a')
-            cmd.append(self.tagName)
-
+            cmd.extend(('-a', self.tagName))
             for msg in self.messages:
                 cmd.extend(['-m', msg])
         else:
@@ -685,8 +661,7 @@ class GitTag(buildstep.BuildStep, GitStepMixin, CompositeStepMixin):
         if self.force:
             cmd.append('--force')
 
-        ret = yield self._dovccmd(cmd)
-        return ret
+        return (yield self._dovccmd(cmd))
 
 
 class GitCommit(buildstep.BuildStep, GitStepMixin, CompositeStepMixin):
@@ -766,10 +741,7 @@ class GitCommit(buildstep.BuildStep, GitStepMixin, CompositeStepMixin):
         cmd = ['status', '--porcelain=v1']
         stdout = yield self._dovccmd(cmd, collectStdout=True)
 
-        for line in stdout.splitlines(False):
-            if line[0] in 'MADRCU':
-                return True
-        return False
+        return any(line[0] in 'MADRCU' for line in stdout.splitlines(False))
 
     @defer.inlineCallbacks
     def _doCommit(self):
@@ -789,8 +761,7 @@ class GitCommit(buildstep.BuildStep, GitStepMixin, CompositeStepMixin):
         if self.no_verify:
             cmd.extend(['--no-verify'])
 
-        ret = yield self._dovccmd(cmd)
-        return ret
+        return (yield self._dovccmd(cmd))
 
     @defer.inlineCallbacks
     def _doAdd(self):
@@ -798,5 +769,4 @@ class GitCommit(buildstep.BuildStep, GitStepMixin, CompositeStepMixin):
 
         cmd.extend(self.paths)
 
-        ret = yield self._dovccmd(cmd)
-        return ret
+        return (yield self._dovccmd(cmd))

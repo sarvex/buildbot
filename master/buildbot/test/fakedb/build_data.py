@@ -43,10 +43,14 @@ class FakeBuildDataComponent(FakeDBComponent):
                 self.build_data[row.id] = row.values.copy()
 
     def _get_build_data_row(self, buildid, name):
-        for row in self.build_data.values():
-            if row['buildid'] == buildid and row['name'] == name:
-                return row
-        return None
+        return next(
+            (
+                row
+                for row in self.build_data.values()
+                if row['buildid'] == buildid and row['name'] == name
+            ),
+            None,
+        )
 
     def setBuildData(self, buildid, name, value, source):
         assert isinstance(value, bytes)
@@ -83,29 +87,28 @@ class FakeBuildDataComponent(FakeDBComponent):
 
     # returns a Deferred
     def getAllBuildDataNoValues(self, buildid):
-        ret = []
-        for row in self.build_data.values():
-            if row['buildid'] != buildid:
-                continue
-            ret.append(self._row2dict_novalue(row))
-
+        ret = [
+            self._row2dict_novalue(row)
+            for row in self.build_data.values()
+            if row['buildid'] == buildid
+        ]
         return defer.succeed(ret)
 
     # returns a Deferred
     def deleteOldBuildData(self, older_than_timestamp):
-        buildids_to_keep = []
-        for build_dict in self.db.builds.builds.values():
-            if build_dict['complete_at'] is None or \
-                    build_dict['complete_at'] >= older_than_timestamp:
-                buildids_to_keep.append(build_dict['id'])
-
+        buildids_to_keep = [
+            build_dict['id']
+            for build_dict in self.db.builds.builds.values()
+            if build_dict['complete_at'] is None
+            or build_dict['complete_at'] >= older_than_timestamp
+        ]
         count_before = len(self.build_data)
 
-        build_dataids_to_remove = []
-        for build_datadict in self.build_data.values():
-            if build_datadict['buildid'] not in buildids_to_keep:
-                build_dataids_to_remove.append(build_datadict['id'])
-
+        build_dataids_to_remove = [
+            build_datadict['id']
+            for build_datadict in self.build_data.values()
+            if build_datadict['buildid'] not in buildids_to_keep
+        ]
         for id in build_dataids_to_remove:
             self.build_data.pop(id)
 

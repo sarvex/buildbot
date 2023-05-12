@@ -47,7 +47,7 @@ class GitHubPullrequestPoller(base.ReconfigurablePollingChangeSource,
     def __init__(self, owner, repo, **kwargs):
         name = kwargs.get("name")
         if not name:
-            kwargs["name"] = "GitHubPullrequestPoller:" + owner + "/" + repo
+            kwargs["name"] = f"GitHubPullrequestPoller:{owner}/{repo}"
         super().__init__(owner, repo, **kwargs)
 
     def checkConfig(self,
@@ -92,7 +92,7 @@ class GitHubPullrequestPoller(base.ReconfigurablePollingChangeSource,
         http_headers = {'User-Agent': 'Buildbot'}
         if token is not None:
             token = yield self.renderSecrets(token)
-            http_headers.update({'Authorization': 'token ' + token})
+            http_headers['Authorization'] = f'token {token}'
 
         if github_property_whitelist is None:
             github_property_whitelist = []
@@ -126,8 +126,7 @@ class GitHubPullrequestPoller(base.ReconfigurablePollingChangeSource,
     def _getPullInformation(self, pull_number):
         result = yield self._http.get('/'.join(
             ['/repos', self.owner, self.repo, 'pulls', str(pull_number)]))
-        my_json = yield result.json()
-        return my_json
+        return (yield result.json())
 
     @defer.inlineCallbacks
     def _getPulls(self):
@@ -176,8 +175,11 @@ class GitHubPullrequestPoller(base.ReconfigurablePollingChangeSource,
         # Get currently assigned revision of PR number
 
         result = yield self._getStateObjectId()
-        rev = yield self.master.db.state.getState(result, f'pull_request{prnumber}', None)
-        return rev
+        return (
+            yield self.master.db.state.getState(
+                result, f'pull_request{prnumber}', None
+            )
+        )
 
     @defer.inlineCallbacks
     def _setCurrentRev(self, prnumber, rev):
@@ -188,10 +190,11 @@ class GitHubPullrequestPoller(base.ReconfigurablePollingChangeSource,
 
     @defer.inlineCallbacks
     def _getStateObjectId(self):
-        # Return a deferred for object id in state db.
-        result = yield self.master.db.state.getObjectId(f'{self.owner}/{self.repo}',
-                                                        self.db_class_name)
-        return result
+        return (
+            yield self.master.db.state.getObjectId(
+                f'{self.owner}/{self.repo}', self.db_class_name
+            )
+        )
 
     @defer.inlineCallbacks
     def _processChanges(self, github_result):
@@ -208,7 +211,7 @@ class GitHubPullrequestPoller(base.ReconfigurablePollingChangeSource,
                     not self.pullrequest_filter(pr)):
                 continue
             current = yield self._getCurrentRev(prnumber)
-            if not current or current[0:12] != revision[0:12]:
+            if not current or current[:12] != revision[:12]:
                 # Access title, repo, html link, and comments
                 pr = yield self._getPullInformation(prnumber)
                 title = pr['title']
@@ -234,8 +237,7 @@ class GitHubPullrequestPoller(base.ReconfigurablePollingChangeSource,
                      consumeErrors=True)
 
                 results = yield dl
-                failures = [r[1] for r in results if not r[0]]
-                if failures:
+                if failures := [r[1] for r in results if not r[0]]:
                     for failure in failures:
                         log.error("while processing changes for "
                                   f"Pullrequest {prnumber} revision {revision}: {failure}")
@@ -243,9 +245,9 @@ class GitHubPullrequestPoller(base.ReconfigurablePollingChangeSource,
                     failures[0].raiseException()
                 [authors, committers, files] = [r[1] for r in results]
 
-                author = authors[0][0] + " <" + authors[0][1] + ">"
+                author = f"{authors[0][0]} <{authors[0][1]}>"
 
-                committer = committers[0][0] + " <" + committers[0][1] + ">"
+                committer = f"{committers[0][0]} <{committers[0][1]}>"
 
                 # emit the change
                 yield self.master.data.updates.addChange(

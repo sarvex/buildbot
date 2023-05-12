@@ -72,9 +72,7 @@ class RpmLint(Test):
 
         @param log: log to create summary off of.
         """
-        warnings = self.obs.warnings
-        errors = []
-        if warnings:
+        if warnings := self.obs.warnings:
             yield self.addCompleteLog(f'{len(warnings)} Warnings', "\n".join(warnings))
-        if errors:
+        if errors := []:
             yield self.addCompleteLog(f'{len(errors)} Errors', "\n".join(errors))

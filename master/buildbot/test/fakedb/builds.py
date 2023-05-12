@@ -87,10 +87,7 @@ class FakeBuildsComponent(FakeDBComponent):
 
     def getBuild(self, buildid):
         row = self.builds.get(buildid)
-        if not row:
-            return defer.succeed(None)
-
-        return defer.succeed(self._row2dict(row))
+        return defer.succeed(None) if not row else defer.succeed(self._row2dict(row))
 
     def getBuildByNumber(self, builderid, number):
         for row in self.builds.values():
@@ -134,15 +131,13 @@ class FakeBuildsComponent(FakeDBComponent):
     def setBuildStateString(self, buildid, state_string):
         validation.verifyType(self.t, 'state_string', state_string,
                               validation.StringValidator())
-        b = self.builds.get(buildid)
-        if b:
+        if b := self.builds.get(buildid):
             b['state_string'] = state_string
         return defer.succeed(None)
 
     def finishBuild(self, buildid, results):
         now = self.reactor.seconds()
-        b = self.builds.get(buildid)
-        if b:
+        if b := self.builds.get(buildid):
             b['complete_at'] = now
             b['results'] = results
         return defer.succeed(None)

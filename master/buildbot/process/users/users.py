@@ -112,8 +112,7 @@ def encrypt(passwd):
     m = sha1()
     salt = hexlify(os.urandom(salt_len))
     m.update(unicode2bytes(passwd) + salt)
-    crypted = bytes2unicode(salt) + m.hexdigest()
-    return crypted
+    return bytes2unicode(salt) + m.hexdigest()
 
 
 def check_passwd(guess, passwd):

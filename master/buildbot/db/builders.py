@@ -77,9 +77,8 @@ class BuildersConnectorComponent(base.DBConnectorComponent):
 
         @d.addCallback
         def first(bldrs):
-            if bldrs:
-                return bldrs[0]
-            return None
+            return bldrs[0] if bldrs else None
+
         return d
 
     # returns a Deferred that returns None

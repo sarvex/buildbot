@@ -143,9 +143,7 @@ class _NSNode:
         if child is None:
             raise PluginDBError(f'Unknown component name: {name}')
 
-        if isinstance(child, _PluginEntry):
-            return child.value
-        return child
+        return child.value if isinstance(child, _PluginEntry) else child
 
     def info(self, name):
         assert isinstance(name, str)
@@ -318,10 +316,10 @@ class _PluginDB:
         """
         get information about all plugins in registered namespaces
         """
-        result = {}
-        for name, namespace in self._namespaces.items():
-            result[name] = namespace.info_all()
-        return result
+        return {
+            name: namespace.info_all()
+            for name, namespace in self._namespaces.items()
+        }
 
 
 _DB = _PluginDB()

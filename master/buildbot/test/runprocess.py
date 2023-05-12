@@ -47,13 +47,9 @@ class MasterRunProcessMixin:
         if not collect_stderr and stderr_is_error and stderr:
             rc = -1
 
-        if collect_stdout and collect_stderr:
-            return (rc, stdout, stderr)
         if collect_stdout:
-            return (rc, stdout)
-        if collect_stderr:
-            return (rc, stderr)
-        return rc
+            return (rc, stdout, stderr) if collect_stderr else (rc, stdout)
+        return (rc, stderr) if collect_stderr else rc
 
     def _patch_runprocess(self):
         if not self._master_run_process_patched:

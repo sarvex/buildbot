@@ -48,24 +48,24 @@ def checkPidFile(pidfile):
 
         except it returns an exception instead of exiting
     """
-    if os.path.exists(pidfile):
-        try:
-            with open(pidfile, encoding='utf-8') as f:
-                pid = int(f.read())
-        except ValueError as e:
-            raise ValueError(f'Pidfile {pidfile} contains non-numeric value') from e
-        try:
-            os.kill(pid, 0)
-        except OSError as why:
-            if why.errno == errno.ESRCH:
-                # The pid doesn't exist.
-                print(f'Removing stale pidfile {pidfile}')
-                os.remove(pidfile)
-            else:
-                raise OSError(
-                    f"Can't check status of PID {pid} from pidfile {pidfile}: {why}") from why
-        else:
-            raise BusyError(f"'{pidfile}' exists - is this master still running?")
+    if not os.path.exists(pidfile):
+        return
+    try:
+        with open(pidfile, encoding='utf-8') as f:
+            pid = int(f.read())
+    except ValueError as e:
+        raise ValueError(f'Pidfile {pidfile} contains non-numeric value') from e
+    try:
+        os.kill(pid, 0)
+    except OSError as why:
+        if why.errno != errno.ESRCH:
+            raise OSError(
+                f"Can't check status of PID {pid} from pidfile {pidfile}: {why}") from why
+        # The pid doesn't exist.
+        print(f'Removing stale pidfile {pidfile}')
+        os.remove(pidfile)
+    else:
+        raise BusyError(f"'{pidfile}' exists - is this master still running?")
 
 
 def checkBasedir(config):
@@ -83,11 +83,10 @@ def checkBasedir(config):
         try:
             checkPidFile(pidfile)
         except Exception as e:
-            print(str(e))
+            print(e)
             return False
 
-    tac = getConfigFromTac(config['basedir'])
-    if tac:
+    if tac := getConfigFromTac(config['basedir']):
         if isinstance(tac.get('rotateLength', 0), str):
             print("ERROR: rotateLength is a string, it should be a number")
             print("ERROR: Please, edit your buildbot.tac file and run again")
@@ -114,7 +113,7 @@ def loadConfig(config, configFileName='master.cfg'):
         print("Errors loading configuration:")
 
         for msg in e.errors:
-            print("  " + msg)
+            print(f"  {msg}")
         return None
     except Exception:
         print("Errors loading configuration:")
@@ -161,9 +160,7 @@ def getConfigFromTac(basedir, quiet=False):
 
 
 def getConfigFileFromTac(basedir, quiet=False):
-    # execute the .tac file to see if its configfile location exists
-    config = getConfigFromTac(basedir, quiet=quiet)
-    if config:
+    if config := getConfigFromTac(basedir, quiet=quiet):
         return config.get("configfile", "master.cfg")
     return "master.cfg"
 
@@ -243,10 +240,12 @@ class SubcommandOptions(usage.Options):
 
         for d in searchpath:
             if os.path.isdir(d):
-                if runtime.platformType != 'win32':
-                    if os.stat(d)[stat.ST_UID] != os.getuid():
-                        print(f"skipping {d} because you don't own it")
-                        continue  # security, skip other people's directories
+                if (
+                    runtime.platformType != 'win32'
+                    and os.stat(d)[stat.ST_UID] != os.getuid()
+                ):
+                    print(f"skipping {d} because you don't own it")
+                    continue  # security, skip other people's directories
                 optfile = os.path.join(d, "options")
                 if os.path.exists(optfile):
                     try:
@@ -264,12 +263,11 @@ class SubcommandOptions(usage.Options):
         return localDict
 
     def postOptions(self):
-        missing = [k for k in self.requiredOptions if self[k] is None]
-        if missing:
+        if missing := [k for k in self.requiredOptions if self[k] is None]:
             if len(missing) > 1:
                 msg = 'Required arguments missing: ' + ', '.join(missing)
             else:
-                msg = 'Required argument missing: ' + missing[0]
+                msg = f'Required argument missing: {missing[0]}'
             raise usage.UsageError(msg)
 
 
@@ -286,11 +284,7 @@ class BasedirMixin:
             extraActions=[usage.CompleteDirs(descr="buildbot base directory")])
 
     def parseArgs(self, *args):
-        if args:
-            self['basedir'] = args[0]
-        else:
-            # Use the current directory if no basedir was specified.
-            self['basedir'] = os.getcwd()
+        self['basedir'] = args[0] if args else os.getcwd()
         if len(args) > 1:
             raise usage.UsageError("I wasn't expecting so many arguments")
 

@@ -33,11 +33,11 @@ class ShellMaster(RunMasterBase):
 
     @defer.inlineCallbacks
     def setup_config_for_master_command(self, **kwargs):
-        c = {}
-
-        c['schedulers'] = [
-            schedulers.AnyBranchScheduler(name="sched", builderNames=["testy"])
-        ]
+        c = {
+            'schedulers': [
+                schedulers.AnyBranchScheduler(name="sched", builderNames=["testy"])
+            ]
+        }
 
         f = BuildFactory()
         f.addStep(steps.MasterShellCommand(**kwargs))

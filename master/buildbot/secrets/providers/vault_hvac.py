@@ -151,9 +151,7 @@ class HashiCorpVaultKvSecretProvider(SecretProviderBase):
         if not self.client.is_authenticated():
             self.authenticator.authenticate(self.client)
 
-        response = self.thd_hvac_wrap_read(path=path)
-
-        return response
+        return self.thd_hvac_wrap_read(path=path)
 
     @defer.inlineCallbacks
     def get(self, entry):

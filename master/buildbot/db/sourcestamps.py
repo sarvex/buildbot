@@ -166,8 +166,7 @@ class SourceStampsConnectorComponent(base.DBConnectorComponent):
             tbl = self.db.model.patches
             q = tbl.select(whereclause=(tbl.c.id == patchid))
             res = conn.execute(q)
-            row = res.fetchone()
-            if row:
+            if row := res.fetchone():
                 # note the subtle renaming here
                 ssdict['patchid'] = patchid
                 ssdict['patch_level'] = row.patchlevel

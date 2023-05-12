@@ -22,10 +22,7 @@ from buildbot.util import service
 from buildbot.util import subscription
 from buildbot.util.eventual import eventually
 
-if False:  # for debugging  pylint: disable=using-constant-test
-    debuglog = log.msg
-else:
-    debuglog = lambda m: None  # noqa
+debuglog = lambda m: None  # noqa
 
 
 class BaseLock:
@@ -76,10 +73,14 @@ class BaseLock:
             self._tryWakeUp()
 
     def _find_waiting(self, requester):
-        for idx, waiter in enumerate(self.waiting):
-            if waiter[0] is requester:
-                return idx
-        return None
+        return next(
+            (
+                idx
+                for idx, waiter in enumerate(self.waiting)
+                if waiter[0] is requester
+            ),
+            None,
+        )
 
     def isAvailable(self, requester, access):
         """ Return a boolean whether the lock is available for claiming """
@@ -180,10 +181,9 @@ class BaseLock:
                 if num_excl > 0 or num_counting >= self.maxCount:
                     break
                 num_counting = num_counting + w_access.count
+            elif num_excl > 0 or num_counting > 0:
+                break
             else:
-                # w_access.mode == 'exclusive'
-                if num_excl > 0 or num_counting > 0:
-                    break
                 num_excl = num_excl + w_access.count
 
             # If the waiter has a deferred, wake it up and clear the deferred

@@ -82,12 +82,18 @@ def getDetailsForBuild(master, build, want_properties=False, want_steps=False,
     build['parentbuild'] = parentbuild
     build['parentbuilder'] = parentbuilder
 
-    ret = yield getDetailsForBuilds(master, buildset, [build],
-                                    want_properties=want_properties, want_steps=want_steps,
-                                    want_previous_build=want_previous_build,
-                                    want_logs=want_logs,
-                                    want_logs_content=want_logs_content)
-    return ret
+    return (
+        yield getDetailsForBuilds(
+            master,
+            buildset,
+            [build],
+            want_properties=want_properties,
+            want_steps=want_steps,
+            want_previous_build=want_previous_build,
+            want_logs=want_logs,
+            want_logs_content=want_logs_content,
+        )
+    )
 
 
 @defer.inlineCallbacks
@@ -175,15 +181,11 @@ def getResponsibleUsersForSourceStamp(master, sourcestampid):
     changesd = master.data.get(("sourcestamps", sourcestampid, "changes"))
     sourcestampd = master.data.get(("sourcestamps", sourcestampid))
     changes, sourcestamp = yield defer.gatherResults([changesd, sourcestampd])
-    blamelist = set()
-    # normally, we get only one, but just assume there might be several
-    for c in changes:
-        blamelist.add(c['author'])
+    blamelist = {c['author'] for c in changes}
     # Add patch author to blamelist
     if 'patch' in sourcestamp and sourcestamp['patch'] is not None:
         blamelist.add(sourcestamp['patch']['author'])
-    blamelist = list(blamelist)
-    blamelist.sort()
+    blamelist = sorted(blamelist)
     return blamelist
 
 
@@ -195,12 +197,7 @@ def getResponsibleUsersForBuild(master, buildid):
         master.data.get(("builds", buildid, 'properties'))
     ]
     changes, properties = yield defer.gatherResults(dl)
-    blamelist = set()
-
-    # add users from changes
-    for c in changes:
-        blamelist.add(c['author'])
-
+    blamelist = {c['author'] for c in changes}
     # add owner from properties
     if 'owner' in properties:
         owner = properties['owner'][0]
@@ -216,14 +213,13 @@ def getResponsibleUsersForBuild(master, buildid):
     if 'owners' in properties:
         blamelist.update(properties['owners'][0])
 
-    blamelist = list(blamelist)
-    blamelist.sort()
+    blamelist = sorted(blamelist)
     return blamelist
 
 
 def getURLForBuild(master, builderid, build_number):
     prefix = master.config.buildbotURL
-    return prefix + f"#/builders/{builderid}/builds/{build_number}"
+    return f"{prefix}#/builders/{builderid}/builds/{build_number}"
 
 
 def getURLForBuildrequest(master, buildrequestid):
@@ -256,8 +252,11 @@ def merge_reports_prop(reports, prop):
 
 
 def merge_reports_prop_take_first(reports, prop):
-    for report in reports:
-        if prop in report and report[prop] is not None:
-            return report[prop]
-
-    return None
+    return next(
+        (
+            report[prop]
+            for report in reports
+            if prop in report and report[prop] is not None
+        ),
+        None,
+    )

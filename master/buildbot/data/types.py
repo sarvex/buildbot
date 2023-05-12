@@ -78,7 +78,7 @@ class NoneOk(Type):
     def __init__(self, nestedType):
         assert isinstance(nestedType, Type)
         self.nestedType = nestedType
-        self.name = self.nestedType.name + " or None"
+        self.name = f"{self.nestedType.name} or None"
 
     @property
     def ramlname(self):
@@ -93,8 +93,7 @@ class NoneOk(Type):
     def validate(self, name, object):
         if object is None:
             return
-        for msg in self.nestedType.validate(name, object):
-            yield msg
+        yield from self.nestedType.validate(name, object)
 
     def getSpec(self):
         r = self.nestedType.getSpec()
@@ -135,7 +134,7 @@ class Instance(Type):
         return self.ramlType
 
     def toGraphQL(self):
-        return self.graphQLType + "!"
+        return f"{self.graphQLType}!"
 
 
 class Integer(Instance):
@@ -180,8 +179,7 @@ class String(Instance):
     graphQLType = "String"
 
     def valueFromString(self, arg):
-        val = util.bytes2unicode(arg)
-        return val
+        return util.bytes2unicode(arg)
 
 
 class Binary(Instance):
@@ -257,8 +255,7 @@ class List(Type):
             return
 
         for idx, elt in enumerate(object):
-            for msg in self.of.validate(f"{name}[{idx}]", elt):
-                yield msg
+            yield from self.of.validate(f"{name}[{idx}]", elt)
 
     def valueFromString(self, arg):
         # valueFromString is used to process URL args, which come one at
@@ -287,10 +284,8 @@ class List(Type):
 
 def ramlMaybeNoneOrList(k, v):
     if isinstance(v, NoneOk):
-        return k + "?"
-    if isinstance(v, List):
-        return k + "[]"
-    return k
+        return f"{k}?"
+    return f"{k}[]" if isinstance(v, List) else k
 
 
 class SourcedProperties(Type):
@@ -369,10 +364,9 @@ class Entity(Type):
     fieldNames = set([])
 
     def __init__(self, name, graphql_name):
-        fields = {}
-        for k, v in self.__class__.__dict__.items():
-            if isinstance(v, Type):
-                fields[k] = v
+        fields = {
+            k: v for k, v in self.__class__.__dict__.items() if isinstance(v, Type)
+        }
         self.fields = fields
         self.fieldNames = set(fields)
         self.name = name
@@ -386,18 +380,15 @@ class Entity(Type):
 
         gotNames = set(object.keys())
 
-        unexpected = gotNames - self.fieldNames
-        if unexpected:
+        if unexpected := gotNames - self.fieldNames:
             yield f'{name} has unexpected keys {", ".join([repr(n) for n in unexpected])}'
 
-        missing = self.fieldNames - gotNames
-        if missing:
+        if missing := self.fieldNames - gotNames:
             yield f'{name} is missing keys {", ".join([repr(n) for n in missing])}'
 
         for k in gotNames & self.fieldNames:
             f = self.fields[k]
-            for msg in f.validate(f"{name}[{repr(k)}]", object[k]):
-                yield msg
+            yield from f.validate(f"{name}[{repr(k)}]", object[k])
 
     def getSpec(self):
         return dict(type=self.name,

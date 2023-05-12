@@ -791,13 +791,8 @@ class RealLockTests(unittest.TestCase):
     def test_worker_lock_update_from_lockid_count_for_worker(
             self, acquire_before, worker_count_before, worker_count_after):
 
-        max_count_before = {}
-        if worker_count_before:
-            max_count_before = {'worker1': 5}
-        max_count_after = {}
-        if worker_count_after:
-            max_count_after = {'worker1': 7}
-
+        max_count_before = {'worker1': 5} if worker_count_before else {}
+        max_count_after = {'worker1': 7} if worker_count_after else {}
         lock = RealWorkerLock('lock1')
         lock.updateFromLockId(WorkerLock('lock1', maxCount=3,
                                          maxCountForWorker=max_count_before), 0)

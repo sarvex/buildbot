@@ -126,10 +126,10 @@ class DBConnectorComponent:
     def doBatch(self, batch, batch_n=500):
         iterator = iter(batch)
         while True:
-            batch = list(itertools.islice(iterator, batch_n))
-            if not batch:
+            if batch := list(itertools.islice(iterator, batch_n)):
+                yield batch
+            else:
                 break
-            yield batch
 
 
 class CachedMethod:
@@ -146,10 +146,9 @@ class CachedMethod:
                                                      lambda key: meth(component, key))
 
         def wrap(key, no_cache=0):
-            if no_cache:
-                return meth(component, key)
-            return cache.get(key)
-        wrap.__name__ = meth_name + " (wrapped)"
+            return meth(component, key) if no_cache else cache.get(key)
+
+        wrap.__name__ = f"{meth_name} (wrapped)"
         wrap.__module__ = meth.__module__
         wrap.__doc__ = meth.__doc__
         wrap.cache = cache

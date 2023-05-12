@@ -138,7 +138,7 @@ class IEmailSender(Interface):
 
 class IEmailLookup(Interface):
 
-    def getAddress(user):
+    def getAddress(self):
         """Turn a User-name string into a valid email address. Either return
         a string (with an @ in it), None (to indicate that the user cannot
         be reached by email), or a Deferred which will fire with the same."""
@@ -151,14 +151,14 @@ class ILogObserver(Interface):
     """
 
     # internal methods
-    def setStep(step):
+    def setStep(self):
         pass
 
-    def setLog(log):
+    def setLog(self):
         pass
 
     # methods called by the LogFile
-    def logChunk(build, step, log, channel, text):
+    def logChunk(self, step, log, channel, text):
         pass
 
 
@@ -183,14 +183,14 @@ class ILatentWorker(IWorker):
 
     # there is an insubstantiate too, but that is not used externally ATM.
 
-    def buildStarted(wfb):
+    def buildStarted(self):
         """Inform the latent worker that a build has started.
 
         @param wfb: a L{LatentWorkerForBuilder}.  The wfb is the one for whom the
         build finished.
         """
 
-    def buildFinished(wfb):
+    def buildFinished(self):
         """Inform the latent worker that a build has finished.
 
         @param wfb: a L{LatentWorkerForBuilder}.  The wfb is the one for whom the
@@ -220,7 +220,7 @@ class IRenderable(Interface):
     """An object that can be interpolated with properties from a build.
     """
 
-    def getRenderingFor(iprops):
+    def getRenderingFor(self):
         """Return a deferred that fires with interpolation with the given properties
 
         @param iprops: the L{IProperties} provider supplying the properties.
@@ -233,7 +233,7 @@ class IProperties(Interface):
     An object providing access to build properties
     """
 
-    def getProperty(name, default=None):
+    def getProperty(self, default=None):
         """Get the named property, returning the default if the property does
         not exist.
 
@@ -245,7 +245,7 @@ class IProperties(Interface):
         @returns: property value
         """
 
-    def hasProperty(name):
+    def hasProperty(self):
         """Return true if the named property exists.
 
         @param name: property name
@@ -253,10 +253,10 @@ class IProperties(Interface):
         @returns: boolean
         """
 
-    def has_key(name):
+    def has_key(self):
         """Deprecated name for L{hasProperty}."""
 
-    def setProperty(name, value, source, runtime=False):
+    def setProperty(self, value, source, runtime=False):
         """Set the given property, overwriting any existing value.  The source
         describes the source of the value for human interpretation.
 
@@ -294,7 +294,7 @@ class IProperties(Interface):
         @returns L{buildbot.process.build.Build} instance
         """
 
-    def render(value):
+    def render(self):
         """Render @code{value} as an L{IRenderable}.  This essentially coerces
         @code{value} to an L{IRenderable} and calls its @L{getRenderingFor}
         method.
@@ -314,8 +314,7 @@ class ITriggerableScheduler(Interface):
     A scheduler that can be triggered by buildsteps.
     """
 
-    def trigger(waited_for, sourcestamps=None, set_props=None,
-                parent_buildid=None, parent_relationship=None):
+    def trigger(self, sourcestamps=None, set_props=None, parent_buildid=None, parent_relationship=None):
         """Trigger a build with the given source stamp and properties.
         """
 
@@ -374,7 +373,7 @@ class IHttpResponse(Interface):
 
 class IConfigurator(Interface):
 
-    def configure(config_dict):
+    def configure(self):
         """
         Alter the buildbot config_dict, as defined in master.cfg
 

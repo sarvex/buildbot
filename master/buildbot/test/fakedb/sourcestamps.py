@@ -133,22 +133,20 @@ class FakeSourceStampsComponent(FakeDBComponent):
         ])
 
     def _getSourceStamp_sync(self, ssid):
-        if ssid in self.sourcestamps:
-            ssdict = self.sourcestamps[ssid].copy()
-            ssdict['ssid'] = ssid
-            patchid = ssdict['patchid']
-            if patchid:
-                ssdict.update(self.patches[patchid])
-                ssdict['patchid'] = patchid
-            else:
-                ssdict['patch_body'] = None
-                ssdict['patch_level'] = None
-                ssdict['patch_subdir'] = None
-                ssdict['patch_author'] = None
-                ssdict['patch_comment'] = None
-            return ssdict
-        else:
+        if ssid not in self.sourcestamps:
             return None
+        ssdict = self.sourcestamps[ssid].copy()
+        ssdict['ssid'] = ssid
+        if patchid := ssdict['patchid']:
+            ssdict.update(self.patches[patchid])
+            ssdict['patchid'] = patchid
+        else:
+            ssdict['patch_body'] = None
+            ssdict['patch_level'] = None
+            ssdict['patch_subdir'] = None
+            ssdict['patch_author'] = None
+            ssdict['patch_comment'] = None
+        return ssdict
 
     @defer.inlineCallbacks
     def getSourceStampsForBuild(self, buildid):

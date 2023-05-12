@@ -65,7 +65,7 @@ class TreeSize(buildstep.ShellMixin, buildstep.BuildStep):
 
         kib = None
         if m:
-            kib = int(m.group(1))
+            kib = int(m[1])
             self.setProperty("tree-size-KiB", kib, "treesize")
             self.descriptionDone = f"treesize {kib} KiB"
         else:
@@ -73,9 +73,7 @@ class TreeSize(buildstep.ShellMixin, buildstep.BuildStep):
 
         if cmd.didFail():
             return FAILURE
-        if kib is None:
-            return WARNINGS  # not sure how 'du' could fail, but whatever
-        return SUCCESS
+        return WARNINGS if kib is None else SUCCESS
 
 
 class SetPropertyFromCommand(buildstep.ShellMixin, buildstep.BuildStep):
@@ -143,9 +141,7 @@ class SetPropertyFromCommand(buildstep.ShellMixin, buildstep.BuildStep):
             self.descriptionDone = f'{len(property_changes)} properties set'
         elif len(property_changes) == 1:
             self.descriptionDone = f'property \'{list(property_changes)[0]}\' set'
-        if cmd.didFail():
-            return FAILURE
-        return SUCCESS
+        return FAILURE if cmd.didFail() else SUCCESS
 
 
 SetProperty = SetPropertyFromCommand
@@ -185,12 +181,9 @@ class ShellCommand(buildstep.ShellMixin, buildstep.BuildStep):
                 'workdir',
             ] + buildstep.BuildStep.parms
 
-            invalid_args = []
-            for arg in kwargs:
-                if arg not in valid_rsc_args:
-                    invalid_args.append(arg)
-
-            if invalid_args:
+            if invalid_args := [
+                arg for arg in kwargs if arg not in valid_rsc_args
+            ]:
                 config.error("Invalid argument(s) passed to ShellCommand: " +
                              ', '.join(invalid_args))
 
@@ -352,8 +345,7 @@ class WarningCountingShellCommand(buildstep.ShellMixin, CompositeStepMixin, buil
         while True:
             _, line = yield
             if directoryEnterRe:
-                match = directoryEnterRe.search(line)
-                if match:
+                if match := directoryEnterRe.search(line):
                     self.directoryStack.append(match.group(1))
                     continue
             if (directoryLeaveRe and
@@ -362,8 +354,7 @@ class WarningCountingShellCommand(buildstep.ShellMixin, CompositeStepMixin, buil
                 self.directoryStack.pop()
                 continue
 
-            match = wre.match(line)
-            if match:
+            if match := wre.match(line):
                 self.maybeAddWarning(self.loggedWarnings, line, match)
 
     def maybeAddWarning(self, warnings, line, match):
@@ -403,8 +394,7 @@ class WarningCountingShellCommand(buildstep.ShellMixin, CompositeStepMixin, buil
             for line in lines:
                 if self.commentEmptyLineRe.match(line):
                     continue
-                match = self.suppressionLineRe.match(line)
-                if match:
+                if match := self.suppressionLineRe.match(line):
                     file, test, start, end = match.groups()
                     if end is not None:
                         end = int(end)
@@ -527,10 +517,7 @@ class PerlModuleTestObserver(logobserver.LogLineObserver):
 
     def __init__(self, warningPattern):
         super().__init__()
-        if warningPattern:
-            self.warningPattern = re.compile(warningPattern)
-        else:
-            self.warningPattern = None
+        self.warningPattern = re.compile(warningPattern) if warningPattern else None
         self.rc = SUCCESS
         self.total = 0
         self.failed = 0
@@ -555,8 +542,6 @@ class PerlModuleTestObserver(logobserver.LogLineObserver):
                 if self.failed:
                     self.rc = FAILURE
             mo = self.testsRe.search(line)
-            if mo:
-                self.total = int(mo.group(1))
         else:
             if line.startswith('Test Summary Report'):
                 self.newStyle = True
@@ -566,8 +551,8 @@ class PerlModuleTestObserver(logobserver.LogLineObserver):
                 self.total = int(mo.group(2))
                 self.rc = FAILURE
             mo = self.oldSuccessCountsRe.search(line)
-            if mo:
-                self.total = int(mo.group(1))
+        if mo:
+            self.total = int(mo.group(1))
 
 
 class PerlModuleTest(Test):

@@ -152,12 +152,13 @@ class Source(buildstep.BuildStep, CompositeStepMixin):
         """
         from inspect import getmembers, ismethod
         methods = getmembers(self, ismethod)
-        group_prefix = attrGroup + '_'
+        group_prefix = f'{attrGroup}_'
         group_len = len(group_prefix)
-        group_members = [method[0][group_len:]
-                         for method in methods
-                         if method[0].startswith(group_prefix)]
-        return group_members
+        return [
+            method[0][group_len:]
+            for method in methods
+            if method[0].startswith(group_prefix)
+        ]
 
     def updateSourceProperty(self, name, value, source=''):
         """
@@ -207,10 +208,7 @@ class Source(buildstep.BuildStep, CompositeStepMixin):
     @defer.inlineCallbacks
     def patch(self, patch):
         diff = patch[1]
-        root = None
-        if len(patch) >= 3:
-            root = patch[2]
-
+        root = patch[2] if len(patch) >= 3 else None
         if root:
             workdir_root = self.build.path_module.join(self.workdir, root)
             workdir_root_abspath = self.build.path_module.abspath(workdir_root)
@@ -234,17 +232,17 @@ class Source(buildstep.BuildStep, CompositeStepMixin):
         return cmd.rc
 
     def sourcedirIsPatched(self):
-        d = self.pathExists(
-            self.build.path_module.join(self.workdir, '.buildbot-patched'))
-        return d
+        return self.pathExists(
+            self.build.path_module.join(self.workdir, '.buildbot-patched')
+        )
 
     @defer.inlineCallbacks
     def run(self):
         if getattr(self, 'startVC', None) is not None:
             msg = 'Old-style source steps are no longer supported. Please convert your custom ' \
-                  'source step to new style (replace startVC with run_vc and convert all used ' \
-                  'old style APIs to new style). Please consider contributing the source step to ' \
-                  'upstream BuildBot so that such migrations can be avoided in the future.'
+                      'source step to new style (replace startVC with run_vc and convert all used ' \
+                      'old style APIs to new style). Please consider contributing the source step to ' \
+                      'upstream BuildBot so that such migrations can be avoided in the future.'
             raise NotImplementedError(msg)
 
         if not self.alwaysUseLatest:
@@ -284,5 +282,4 @@ class Source(buildstep.BuildStep, CompositeStepMixin):
             branch = self.branch
             patch = None
 
-        res = yield self.run_vc(branch, revision, patch)
-        return res
+        return (yield self.run_vc(branch, revision, patch))

@@ -48,8 +48,6 @@ class BuildRequestGenerator(BuildStatusGeneratorMixin):
     @defer.inlineCallbacks
     def partial_build_dict(self, master, buildrequest):
         brdict = yield master.db.buildrequests.getBuildRequest(buildrequest['buildrequestid'])
-        bdict = {}
-
         props = Properties()
         buildrequest = yield BuildRequest.fromBrdict(master, brdict)
         builder = yield master.botmaster.getBuilderById(brdict['builderid'])
@@ -57,7 +55,7 @@ class BuildRequestGenerator(BuildStatusGeneratorMixin):
         Build.setupPropertiesKnownBeforeBuildStarts(props, [buildrequest], builder)
         Build.setupBuildProperties(props, [buildrequest])
 
-        bdict['properties'] = props.asDict()
+        bdict = {'properties': props.asDict()}
         yield utils.get_details_for_buildrequest(master, brdict, bdict)
         return bdict
 
@@ -72,8 +70,7 @@ class BuildRequestGenerator(BuildStatusGeneratorMixin):
         if not self.is_message_needed_by_props(build):
             return None
 
-        report = yield self.buildrequest_message(master, build)
-        return report
+        return (yield self.buildrequest_message(master, build))
 
     @defer.inlineCallbacks
     def buildrequest_message(self, master, build):

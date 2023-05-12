@@ -27,16 +27,15 @@ class TestLog(RunMasterBase):
 
     @defer.inlineCallbacks
     def setup_config(self, step):
-        c = {}
         from buildbot.config import BuilderConfig
         from buildbot.process.factory import BuildFactory
         from buildbot.plugins import schedulers
 
-        c['schedulers'] = [
-            schedulers.AnyBranchScheduler(
-                name="sched",
-                builderNames=["testy"])]
-
+        c = {
+            'schedulers': [
+                schedulers.AnyBranchScheduler(name="sched", builderNames=["testy"])
+            ]
+        }
         f = BuildFactory()
         f.addStep(step)
         c['builders'] = [

@@ -39,13 +39,14 @@ from buildbot.steps.package.rpm import rpmbuild
 from buildbot.steps.package.rpm import rpmlint
 from buildbot.util import eventual
 
-modules = []  # for the benefit of pyflakes
-modules.extend([worker])
-modules.extend([p4poller, svnpoller])
-modules.extend([sendchange, tryclient])
-modules.extend([subunitlogobserver])
-modules.extend([checkconfig, logwatcher, reconfig, runner])
-modules.extend([master, maxq, python, python_twisted, subunit])
-modules.extend([trigger, vstudio])
-modules.extend([rpmbuild, rpmlint])
-modules.extend([eventual])
+modules = [
+    worker,
+    *[p4poller, svnpoller],
+    *[sendchange, tryclient],
+    *[subunitlogobserver],
+    *[checkconfig, logwatcher, reconfig, runner],
+    *[master, maxq, python, python_twisted, subunit],
+    *[trigger, vstudio],
+    *[rpmbuild, rpmlint],
+    *[eventual],
+]

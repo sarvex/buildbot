@@ -117,8 +117,7 @@ class LogWatcher(LineOnlyLongLineReceiver):
         self.p = self._reactor.spawnProcess(self.pp, tailBin, args,
                                             env=os.environ)
         self.running = True
-        d = defer.maybeDeferred(self._start)
-        return d
+        return defer.maybeDeferred(self._start)
 
     def _start(self):
         self.d = defer.Deferred()

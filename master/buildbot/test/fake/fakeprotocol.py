@@ -62,7 +62,7 @@ class FakeConnection(base.Connection):
 
     def remoteSetBuilderList(self, builders):
         self.remoteCalls.append(('remoteSetBuilderList', builders[:]))
-        self.builders = dict((b, False) for b in builders)
+        self.builders = {b: False for b in builders}
         return defer.succeed(None)
 
     def remoteStartCommand(self, remoteCommand, builderName, commandId, commandName, args):
@@ -84,6 +84,4 @@ class FakeConnection(base.Connection):
         return defer.succeed(None)
 
     def get_peer(self):
-        if self._connected:
-            return "fake_peer"
-        return None
+        return "fake_peer" if self._connected else None

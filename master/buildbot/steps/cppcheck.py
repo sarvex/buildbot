@@ -66,7 +66,7 @@ class Cppcheck(ShellMixin, BuildStep):
             _, line = yield
             m = line_re.match(line)
             if m is not None:
-                msgsev = m.group('severity')
+                msgsev = m['severity']
                 self.summaries[msgsev].append(line)
                 self.counts[msgsev] += 1
 
@@ -104,6 +104,4 @@ class Cppcheck(ShellMixin, BuildStep):
         for msg in self.flunkingIssues:
             if self.counts[msg] != 0:
                 return FAILURE
-        if sum(self.counts.values()) > 0:
-            return WARNINGS
-        return SUCCESS
+        return WARNINGS if sum(self.counts.values()) > 0 else SUCCESS

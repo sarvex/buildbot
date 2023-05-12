@@ -52,16 +52,10 @@ class Client:
 
     def build(self, fileobj, tag, pull, target):
         if fileobj.read() == b'BUG':
-            pass
-        elif pull != bool(pull):
-            pass
-        elif target != "":
-            pass
-        else:
-            logs = []
-            for line in logs:
-                yield line
-            self._images.append({'RepoTags': [tag + ':latest']})
+            return
+        if pull == bool(pull) and target == "":
+            yield from []
+            self._images.append({'RepoTags': [f'{tag}:latest']})
 
     def pull(self, image, *args, **kwargs):
         if image in self._pullable:

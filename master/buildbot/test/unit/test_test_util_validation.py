@@ -36,7 +36,7 @@ class VerifyDict(unittest.TestCase):
             self.assertNotEqual(msgs, [], f'no messages for {repr(b)}')
             log.msg('..got messages:')
             for msg in msgs:
-                log.msg("  " + msg)
+                log.msg(f"  {msg}")
 
     def test_IntValidator(self):
         self.doValidationTest(validation.IntValidator(),

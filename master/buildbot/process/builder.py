@@ -113,9 +113,7 @@ class Builder(util_service.ReconfigurableServiceMixin,
             return True
         if old_config.description != new_config.description:
             return True
-        if old_config.tags != new_config.tags:
-            return True
-        return False
+        return old_config.tags != new_config.tags
 
     def __repr__(self):
         return f"<Builder '{repr(self.name)}' at {id(self)}>"
@@ -152,9 +150,7 @@ class Builder(util_service.ReconfigurableServiceMixin,
             ('builders', bldrid, 'buildrequests'),
             [resultspec.Filter('claimed', 'eq', [False])],
             order=['submitted_at'], limit=1)
-        if unclaimed:
-            return unclaimed[0]['submitted_at']
-        return None
+        return unclaimed[0]['submitted_at'] if unclaimed else None
 
     @defer.inlineCallbacks
     def getNewestCompleteTime(self):
@@ -168,19 +164,13 @@ class Builder(util_service.ReconfigurableServiceMixin,
             ('builders', bldrid, 'buildrequests'),
             [resultspec.Filter('complete', 'eq', [True])],
             order=['-complete_at'], limit=1)
-        if completed:
-            return completed[0]['complete_at']
-        else:
-            return None
+        return completed[0]['complete_at'] if completed else None
 
     def getBuild(self, number):
         for b in self.building:
             if b.number == number:
                 return b
-        for b in self.old_building:
-            if b.number == number:
-                return b
-        return None
+        return next((b for b in self.old_building if b.number == number), None)
 
     def addLatentWorker(self, worker):
         assert interfaces.ILatentWorker.providedBy(worker)
@@ -239,10 +229,14 @@ class Builder(util_service.ReconfigurableServiceMixin,
             return None
 
     def _find_wfb_by_worker(self, worker):
-        for wfb in self.attaching_workers + self.workers:
-            if wfb.worker == worker:
-                return wfb
-        return None
+        return next(
+            (
+                wfb
+                for wfb in self.attaching_workers + self.workers
+                if wfb.worker == worker
+            ),
+            None,
+        )
 
     def detached(self, worker):
         """This is called when the connection to the bot is lost."""

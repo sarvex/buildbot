@@ -47,7 +47,7 @@ def split_file_branches(path):
     if len(pieces) > 1 and pieces[0] == 'trunk':
         return (None, '/'.join(pieces[1:]))
     elif len(pieces) > 2 and pieces[0] == 'branches':
-        return ('/'.join(pieces[0:2]), '/'.join(pieces[2:]))
+        return '/'.join(pieces[:2]), '/'.join(pieces[2:])
     return None
 
 
@@ -195,7 +195,7 @@ class SVNPoller(base.ReconfigurablePollingChangeSource, util.ComparableMixin):
         # whew.
 
         if self.project:
-            log.msg("SVNPoller: polling " + self.project)
+            log.msg(f"SVNPoller: polling {self.project}")
         else:
             log.msg("SVNPoller: polling")
 
@@ -283,8 +283,7 @@ class SVNPoller(base.ReconfigurablePollingChangeSource, util.ComparableMixin):
         except xml.parsers.expat.ExpatError:
             log.msg(f"SVNPoller: SVNPoller.parse_logs: ExpatError in '{output}'")
             raise
-        logentries = doc.getElementsByTagName("logentry")
-        return logentries
+        return doc.getElementsByTagName("logentry")
 
     def get_new_logentries(self, logentries):
         last_change = old_last_change = self.last_change
@@ -352,7 +351,7 @@ class SVNPoller(base.ReconfigurablePollingChangeSource, util.ComparableMixin):
 
             if self.revlinktmpl and revision:
                 revlink = self.revlinktmpl % urlquote_plus(revision)
-                revlink = str(revlink)
+                revlink = revlink
 
             log.msg(f"Adding change revision {revision}")
             author = self._get_text(el, "author")
@@ -373,15 +372,10 @@ class SVNPoller(base.ReconfigurablePollingChangeSource, util.ComparableMixin):
                 kind = p.getAttribute("kind")
                 action = p.getAttribute("action")
                 path = "".join([t.data for t in p.childNodes])
-                if path.startswith("/"):
-                    path = path[1:]
+                path = path.removeprefix("/")
                 if kind == "dir" and not path.endswith("/"):
                     path += "/"
-                where = self._transform_path(path)
-
-                # if 'where' is None, the file was outside any project that
-                # we care about and we should ignore it
-                if where:
+                if where := self._transform_path(path):
                     branch = where.get("branch", None)
                     filename = where["path"]
                     if branch not in branches:

@@ -170,11 +170,7 @@ class Bzr(Source):
         if self.revision:
             command.extend(['-r', self.revision])
 
-        if self.retry:
-            abandonOnFailure = (self.retry[1] <= 0)
-        else:
-            abandonOnFailure = True
-
+        abandonOnFailure = (self.retry[1] <= 0) if self.retry else True
         res = yield self._dovccmd(command, abandonOnFailure=abandonOnFailure)
 
         if self.retry:
@@ -196,10 +192,7 @@ class Bzr(Source):
         return self.pathExists(self.build.path_module.join(self.workdir, '.bzr'))
 
     def computeSourceRevision(self, changes):
-        if not changes:
-            return None
-        lastChange = max(int(c.revision) for c in changes)
-        return lastChange
+        return None if not changes else max(int(c.revision) for c in changes)
 
     def _dovccmd(self, command, abandonOnFailure=True, collectStdout=False):
         cmd = remotecommand.RemoteShellCommand(self.workdir, ['bzr'] + command,
@@ -215,9 +208,8 @@ class Bzr(Source):
             if abandonOnFailure and cmd.didFail():
                 log.msg(f"Source step failed while running command {cmd}")
                 raise buildstep.BuildStepFailed()
-            if collectStdout:
-                return cmd.stdout
-            return cmd.rc
+            return cmd.stdout if collectStdout else cmd.rc
+
         return d
 
     def checkBzr(self):
@@ -233,7 +225,7 @@ class Bzr(Source):
             return self.method
         elif self.mode == 'incremental':
             return None
-        elif self.method is None and self.mode == 'full':
+        elif self.mode == 'full':
             return 'fresh'
         return None
 

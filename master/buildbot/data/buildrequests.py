@@ -34,9 +34,11 @@ class Db2DataMixin:
         """
         # by default no properties are returned
         if props and filters:
-            return (props
-                    if '*' in filters
-                    else dict(((k, v) for k, v in props.items() if k in filters)))
+            return (
+                props
+                if '*' in filters
+                else {k: v for k, v in props.items() if k in filters}
+            )
         return None
 
     @defer.inlineCallbacks
@@ -44,8 +46,9 @@ class Db2DataMixin:
         if not filters:
             return None
         props = yield self.master.db.buildsets.getBuildsetProperties(buildrequest['buildsetid'])
-        filtered_properties = self._generate_filtered_properties(props, filters)
-        if filtered_properties:
+        if filtered_properties := self._generate_filtered_properties(
+            props, filters
+        ):
             buildrequest['properties'] = filtered_properties
         return None
 
@@ -151,9 +154,9 @@ class BuildRequestsEndpoint(Db2DataMixin, base.Endpoint):
     def get(self, resultSpec, kwargs):
         builderid = kwargs.get("builderid", None)
         complete = resultSpec.popBooleanFilter('complete')
-        claimed_by_masterid = resultSpec.popBooleanFilter(
-            'claimed_by_masterid')
-        if claimed_by_masterid:
+        if claimed_by_masterid := resultSpec.popBooleanFilter(
+            'claimed_by_masterid'
+        ):
             # claimed_by_masterid takes precedence over 'claimed' filter
             # (no need to check consistency with 'claimed' filter even if
             # 'claimed'=False with 'claimed_by_masterid' set, doesn't make sense)
@@ -286,11 +289,16 @@ class BuildRequest(base.ResourceType):
         properties = yield self.master.data.get(('buildsets', buildrequest['buildsetid'],
                                                  'properties'))
         ssids = [ss['ssid'] for ss in buildset['sourcestamps']]
-        res = yield self.master.data.updates.addBuildset(
-                waited_for=False, scheduler='rebuild', sourcestamps=ssids, reason='rebuild',
+        return (
+            yield self.master.data.updates.addBuildset(
+                waited_for=False,
+                scheduler='rebuild',
+                sourcestamps=ssids,
+                reason='rebuild',
                 properties=properties,
                 builderids=[buildrequest['builderid']],
                 external_idstring=buildset['external_idstring'],
                 parent_buildid=buildset['parent_buildid'],
-                parent_relationship=buildset['parent_relationship'])
-        return res
+                parent_relationship=buildset['parent_relationship'],
+            )
+        )

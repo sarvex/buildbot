@@ -98,11 +98,7 @@ def defaultSummaryCB(buildInfoList, results, master, arg):
 
     for buildInfo in buildInfoList:
         msg = f"Builder {buildInfo['name']} {buildInfo['resultText']} ({buildInfo['text']})"
-        link = buildInfo.get('url', None)
-        if link:
-            msg += " - " + link
-        else:
-            msg += "."
+        msg += f" - {link}" if (link := buildInfo.get('url', None)) else "."
         msgs.append(msg)
 
         if buildInfo['result'] == SUCCESS:  # pylint: disable=simplifiable-if-statement
@@ -110,11 +106,7 @@ def defaultSummaryCB(buildInfoList, results, master, arg):
         else:
             failure = True
 
-    if success and not failure:
-        verified = 1
-    else:
-        verified = -1
-
+    verified = 1 if success and not failure else -1
     return makeReviewResult('\n\n'.join(msgs), (GERRIT_LABEL_VERIFIED, verified))
 
 
@@ -379,6 +371,7 @@ class GerritStatusPush(service.BuildbotService):
 
         def getProperty(build, name):
             return build['properties'].get(name, [None])[0]
+
         # Gerrit + Repo
         downloads = getProperty(build, "repo_downloads")
         downloaded = getProperty(build, "repo_downloaded")
@@ -410,11 +403,7 @@ class GerritStatusPush(service.BuildbotService):
             if isinstance(revision, dict):
                 # in case of the revision is a codebase revision, we just take
                 # the revisionfor current codebase
-                if codebase is not None:
-                    revision = revision[codebase]
-                else:
-                    revision = None
-
+                revision = revision[codebase] if codebase is not None else None
             if project is not None and revision is not None:
                 self.sendCodeReview(project, revision, result)
                 return
@@ -435,13 +424,11 @@ class GerritStatusPush(service.BuildbotService):
         if self._gerrit_notify is not None:
             command.append(f'--notify {str(self._gerrit_notify)}')
 
-        message = result.get('message', None)
-        if message:
+        if message := result.get('message', None):
             message = message.replace("'", "\"")
             command.append(f"--message '{message}'")
 
-        labels = result.get('labels', None)
-        if labels:
+        if labels := result.get('labels', None):
             if gerrit_version < parse_version("2.6"):
                 add_label = _old_add_label
             else:

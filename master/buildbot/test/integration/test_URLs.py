@@ -30,16 +30,15 @@ class UrlForBuildMaster(RunMasterBase):
 
     @defer.inlineCallbacks
     def setup_config(self):
-        c = {}
         from buildbot.config import BuilderConfig
         from buildbot.process.factory import BuildFactory
         from buildbot.plugins import steps, schedulers, util
 
-        c['schedulers'] = [
-            schedulers.ForceScheduler(
-                name="force",
-                builderNames=["testy"])]
-
+        c = {
+            'schedulers': [
+                schedulers.ForceScheduler(name="force", builderNames=["testy"])
+            ]
+        }
         f = BuildFactory()
         # do a bunch of transfer to exercise the protocol
         f.addStep(steps.ShellCommand(command=["echo", util.URLForBuild]))

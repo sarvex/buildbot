@@ -70,7 +70,7 @@ class SourceRest():
             "owner": self.owner,
             "slug": self.slug,
             "hash": self.hash,
-            "short_hash": self.hash[0:12],
+            "short_hash": self.hash[:12],
             "date": self.date,
         }
 
@@ -119,17 +119,14 @@ class PullRequestRest():
         self.display_name = display_name
         self.source = source
         self.created_on = created_on
-        if updated_on:
-            self.updated_on = updated_on
-        else:
-            self.updated_on = self.created_on
+        self.updated_on = updated_on if updated_on else self.created_on
 
     def response(self):
         return self.template % {
             "description": self.description,
             "title": self.title,
             "hash": self.source.hash,
-            "short_hash": self.source.hash[0:12],
+            "short_hash": self.source.hash[:12],
             "owner": self.source.owner,
             "slug": self.source.slug,
             "display_name": self.display_name,
@@ -197,22 +194,24 @@ class PullRequestListRest():
 
     def response(self):
 
-        s = ""
-        for pr in self.prs:
-            s += self.template % {
+        s = "".join(
+            self.template
+            % {
                 "description": pr.description,
                 "owner": self.owner,
                 "slug": self.slug,
                 "display_name": pr.display_name,
                 "title": pr.title,
                 "hash": pr.source.hash,
-                "short_hash": pr.source.hash[0:12],
+                "short_hash": pr.source.hash[:12],
                 "src_owner": pr.source.owner,
                 "src_slug": pr.source.slug,
                 "created_on": pr.created_on,
                 "updated_on": pr.updated_on,
                 "id": pr.nr,
             }
+            for pr in self.prs
+        )
         return f"""\
 {{
 
@@ -236,17 +235,14 @@ class PullRequestListRest():
         if list_url_re.match(url):
             return defer.succeed(self.request())
 
-        m = pr_url_re.match(url)
-        if m:
-            return self.pr_by_id[int(m.group("id"))].request()
+        if m := pr_url_re.match(url):
+            return self.pr_by_id[int(m["id"])].request()
 
-        m = source_commit_url_re.match(url)
-        if m:
-            return self.src_by_url[f'{m.group("src_owner")}/{m.group("src_slug")}'].request()
+        if m := source_commit_url_re.match(url):
+            return self.src_by_url[f'{m["src_owner"]}/{m["src_slug"]}'].request()
 
-        m = source_url_re.match(url)
-        if m:
-            return self.src_by_url[f'{m.group("src_owner")}/{m.group("src_slug")}'].repo_request()
+        if m := source_url_re.match(url):
+            return self.src_by_url[f'{m["src_owner"]}/{m["src_slug"]}'].repo_request()
 
         raise Error(code=404)
 

@@ -76,11 +76,14 @@ class Trigger(BuildStep):
                     return True
             return False
 
-        if not hasRenderable(schedulerNames) and not hasRenderable(unimportantSchedulerNames):
-            if not set(schedulerNames).issuperset(set(unimportantSchedulerNames)):
-                config.error(
-                    "unimportantSchedulerNames must be a subset of schedulerNames"
-                )
+        if (
+            not hasRenderable(schedulerNames)
+            and not hasRenderable(unimportantSchedulerNames)
+            and not set(schedulerNames).issuperset(set(unimportantSchedulerNames))
+        ):
+            config.error(
+                "unimportantSchedulerNames must be a subset of schedulerNames"
+            )
 
         self.schedulerNames = schedulerNames
         self.unimportantSchedulerNames = unimportantSchedulerNames
@@ -167,18 +170,12 @@ class Trigger(BuildStep):
                 codebase = ss.get('codebase', '')
                 assert codebase not in ss_for_trigger, "codebase specified multiple times"
                 ss_for_trigger[codebase] = ss
-            trigger_values = [ss_for_trigger[k] for k in sorted(ss_for_trigger.keys())]
-            return trigger_values
-
+            return [ss_for_trigger[k] for k in sorted(ss_for_trigger.keys())]
         if self.alwaysUseLatest:
             return []
 
-        # start with the sourcestamps from current build
-        ss_for_trigger = {}
         objs_from_build = self.build.getAllSourceStamps()
-        for ss in objs_from_build:
-            ss_for_trigger[ss.codebase] = ss.asDict()
-
+        ss_for_trigger = {ss.codebase: ss.asDict() for ss in objs_from_build}
         # overrule revision in sourcestamps with got revision
         if self.updateSourceStamp:
             got = self.getAllGotRevisions()
@@ -186,8 +183,7 @@ class Trigger(BuildStep):
                 if codebase in got:
                     ss['revision'] = got[codebase]
 
-        trigger_values = [ss_for_trigger[k] for k in sorted(ss_for_trigger.keys())]
-        return trigger_values
+        return [ss_for_trigger[k] for k in sorted(ss_for_trigger.keys())]
 
     def getAllGotRevisions(self):
         all_got_revisions = self.getProperty('got_revision', {})
@@ -222,8 +218,8 @@ class Trigger(BuildStep):
         for was_cb, results in rclist:
             if isinstance(results, tuple):
                 results, brids = results
-            builderNames = {}
             if was_cb:  # errors were already logged in worstStatus
+                builderNames = {}
                 for builderid, br in brids.items():
                     builds = yield self.master.db.builds.getBuilds(buildrequestid=br)
                     for build in builds:
@@ -354,8 +350,6 @@ class Trigger(BuildStep):
         summary = ""
         if self._result_list:
             for status in ALL_RESULTS:
-                count = self._result_list.count(status)
-                if count:
-                    summary = summary + (f", {self._result_list.count(status)} "
-                        f"{statusToString(status, count)}")
+                if count := self._result_list.count(status):
+                    summary = f"{summary}, {self._result_list.count(status)} {statusToString(status, count)}"
         return {'step': f"triggered {', '.join(self.triggeredNames)}{summary}"}

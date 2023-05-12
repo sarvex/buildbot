@@ -49,18 +49,21 @@ class ShellMaster(RunMasterBase):
 
     @defer.inlineCallbacks
     def setup_config(self):
-        c = {}
         from buildbot.config import BuilderConfig
         from buildbot.process.factory import BuildFactory
         from buildbot.plugins import steps, schedulers, util
 
-        c['schedulers'] = [
-            schedulers.ForceScheduler(
-                name="force",
-                codebases=[util.CodebaseParameter(
-                    "foo", patch=util.PatchParameter())],
-                builderNames=["testy"])]
-
+        c = {
+            'schedulers': [
+                schedulers.ForceScheduler(
+                    name="force",
+                    codebases=[
+                        util.CodebaseParameter("foo", patch=util.PatchParameter())
+                    ],
+                    builderNames=["testy"],
+                )
+            ]
+        }
         f = BuildFactory()
         f.addStep(MySource(codebase='foo'))
         # if the patch was applied correctly, then make will work!
